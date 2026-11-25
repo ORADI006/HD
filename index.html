@@ -6,9 +6,15 @@
     <title>HADASSA — Designer & MC | Portfolio Créatif</title>
     <meta name="description" content="HADASSA — Designer graphique / Digital Designer & Maître de cérémonie. Je transforme les idées en visuels puissants et les événements en expériences inoubliables.">
     <meta name="theme-color" content="#0a0a0a">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://hd-orpin-zeta.vercel.app/">
     <meta property="og:title" content="HADASSA — Designer & MC">
     <meta property="og:description" content="Portfolio créatif premium de HADASSA, Designer graphique & Maître de cérémonie.">
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://hd-orpin-zeta.vercel.app/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="HADASSA — Designer & MC">
+    <meta name="twitter:description" content="Designer graphique et maîtresse de cérémonie. Découvrez le portfolio créatif de HADASSA.">
 
     <!-- Police : Syne pour les titres, Inter pour le texte -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1592,9 +1598,35 @@
                 align-items: flex-start;
             }
         }
-        </style>
+            /* ========== ACCESSIBILITÉ & CONFORT ========== */
+        .skip-link {
+            position: fixed;
+            top: 0.75rem;
+            left: 0.75rem;
+            z-index: 10001;
+            padding: 0.8rem 1rem;
+            background: var(--red);
+            color: #fff;
+            border-radius: 4px;
+            transform: translateY(-160%);
+            transition: transform 0.2s ease;
+        }
+        .skip-link:focus {
+            transform: translateY(0);
+            outline: 3px solid #fff;
+            outline-offset: 3px;
+        }
+        :focus-visible {
+            outline: 2px solid var(--red);
+            outline-offset: 4px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+        }
+    </style>
 </head>
 <body class="custom-cursor">
+    <a class="skip-link" href="#main-content">Aller au contenu principal</a>
 
     <!-- Curseur personnalisé -->
     <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
@@ -1640,6 +1672,7 @@
         <a href="https://wa.me/243973773099" target="_blank" rel="noopener" class="mobile-cta" data-i18n="book-hadassa">BOOK HADASSA →</a>
     </div>
 
+    <main id="main-content">
     <!-- ========== HERO ========== -->
     <section class="hero" id="home">
         <div class="container">
@@ -1671,7 +1704,7 @@
 
                     <!-- PLACEHOLDER : Remplacer le contenu de cette div par la photo réelle de HADASSA -->
                     <div class="hero-photo-placeholder" id="heroPhotoPlaceholder">
-                        <img src="h2.jpg" alt="" >
+                        <img src="h2.jpg" alt="Portrait de HADASSA" fetchpriority="high" decoding="async">
                     </div>
 
                     <!-- Carte flottante -->
@@ -1789,7 +1822,7 @@
             <div class="portfolio-grid">
                 <div class="portfolio-item fade-in">
                     <div class="thumb">
-                        <img src="MC.jpeg" alt="Brand Identity">
+                        <img src="MC.jpeg" alt="Brand Identity" loading="lazy" decoding="async">
                     </div>
                     <div class="overlay">
                         <h3>01 — BRAND IDENTITY</h3>
@@ -1799,7 +1832,7 @@
                 </div>
                 <div class="portfolio-item fade-in fade-in-delay-1">
                     <div class="thumb">
-                        <img src="AFF.jpeg" alt="Event Poster">
+                        <img src="AFF.jpeg" alt="Event Poster" loading="lazy" decoding="async">
                     </div>
                     <div class="overlay">
                         <h3>02 — EVENT POSTER</h3>
@@ -1815,7 +1848,7 @@
                 </div>
                 <div class="portfolio-item fade-in">
                     <div class="thumb">
-                        <img src="VI.jpeg" alt="Visual Identity">
+                        <img src="VI.jpeg" alt="Visual Identity" loading="lazy" decoding="async">
                     </div>
                     <div class="overlay">
                         <h3>04 — VISUAL IDENTITY</h3>
@@ -1824,7 +1857,7 @@
                 </div>
                 <div class="portfolio-item fade-in fade-in-delay-1">
                     <div class="thumb video-thumb">
-                        <video class="portfolio-video" muted loop playsinline preload="metadata" poster="h2.jpg" aria-label="Vidéo Digital Experience">
+                        <video class="portfolio-video" muted loop playsinline preload="none" poster="h2.jpg" aria-label="Vidéo Digital Experience">
                             <source src="DE.mp4" type="video/mp4">
                         </video>
                         <button class="video-sound-toggle" type="button" aria-label="Activer le son" aria-pressed="false" title="Activer le son">
@@ -1839,7 +1872,7 @@
                 </div>
                 <div class="portfolio-item fade-in fade-in-delay-2">
                     <div class="thumb video-thumb">
-                        <video class="portfolio-video" muted loop playsinline preload="metadata"  aria-label="Vidéo MC mariage">
+                        <video class="portfolio-video" muted loop playsinline preload="none"  aria-label="Vidéo MC mariage">
                             <source src="mariage.mp4" type="video/mp4">
                         </video>
                         <button class="video-sound-toggle" type="button" aria-label="Activer le son" aria-pressed="false" title="Activer le son">
@@ -1864,10 +1897,10 @@
 
             <!-- Galerie de photos d'événements -->
             <div class="events-gallery">
-                <div class="event-photo fade-in"><img src="EV1.jpeg" alt="Événement 1"></div>
-                <div class="event-photo fade-in fade-in-delay-1"><img src="EV2.jpeg" alt="Événement 2"></div>
-                <div class="event-photo fade-in fade-in-delay-2"><img src="EV3.jpeg" alt="Événement 3"></div>
-                <div class="event-photo fade-in fade-in-delay-3"><img src="EV4.jpeg" alt="Événement 4"></div>
+                <div class="event-photo fade-in"><img src="EV1.jpeg" alt="Événement 1" loading="lazy" decoding="async"></div>
+                <div class="event-photo fade-in fade-in-delay-1"><img src="EV2.jpeg" alt="Événement 2" loading="lazy" decoding="async"></div>
+                <div class="event-photo fade-in fade-in-delay-2"><img src="EV3.jpeg" alt="Événement 3" loading="lazy" decoding="async"></div>
+                <div class="event-photo fade-in fade-in-delay-3"><img src="EV4.jpeg" alt="Événement 4" loading="lazy" decoding="async"></div>
             </div>
 
             <!-- Statistiques -->
@@ -1984,6 +2017,7 @@
         </div>
     </section>
 
+    </main>
     <!-- ========== FOOTER ========== -->
     <footer class="footer">
         <div class="container">
@@ -2041,6 +2075,7 @@
             let isHoveringInteractive = false;
 
             const isDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+            const shouldReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
             if (isDesktop) {
                 document.addEventListener('mousemove', (e) => {
@@ -2173,13 +2208,23 @@
                 document.querySelectorAll('[data-language]').forEach(button => {
                     button.classList.toggle('active', button.dataset.language === language);
                 });
-                localStorage.setItem('hadassa-language', language);
+                try {
+                    localStorage.setItem('hadassa-language', language);
+                } catch (error) {
+                    // Le site reste utilisable même si le stockage du navigateur est désactivé.
+                }
             }
 
             document.querySelectorAll('[data-language]').forEach(button => {
                 button.addEventListener('click', () => setLanguage(button.dataset.language));
             });
-            setLanguage(localStorage.getItem('hadassa-language') || 'fr');
+            let savedLanguage = 'fr';
+            try {
+                savedLanguage = localStorage.getItem('hadassa-language') || 'fr';
+            } catch (error) {
+                // Langue française par défaut si le stockage est indisponible.
+            }
+            setLanguage(savedLanguage);
 
             function toggleMenu() {
                 hamburger.classList.toggle('active');
@@ -2251,7 +2296,7 @@
             const videoObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const video = entry.target;
-                    if (entry.isIntersecting) {
+                    if (entry.isIntersecting && !shouldReduceMotion) {
                         video.play().catch(() => {});
                     } else {
                         video.pause();
@@ -2259,7 +2304,10 @@
                 });
             }, { threshold: 0.35 });
 
-            portfolioVideos.forEach(video => videoObserver.observe(video));
+            portfolioVideos.forEach(video => {
+                if (shouldReduceMotion) video.pause();
+                videoObserver.observe(video);
+            });
 
             document.querySelectorAll('.video-sound-toggle').forEach(button => {
                 const toggleVideoSound = (event) => {
