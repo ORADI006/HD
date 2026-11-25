@@ -6,6 +6,18 @@
     <title>HADASSA — Designer & MC | Portfolio Créatif</title>
     <meta name="description" content="HADASSA — Designer graphique / Digital Designer & Maître de cérémonie. Je transforme les idées en visuels puissants et les événements en expériences inoubliables.">
     <meta name="theme-color" content="#0a0a0a">
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('hadassa-theme');
+                if (savedTheme === 'light' || savedTheme === 'dark') {
+                    document.documentElement.dataset.theme = savedTheme;
+                }
+            } catch (error) {
+                // Le thème sombre reste le thème par défaut.
+            }
+        })();
+    </script>
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://hd-orpin-zeta.vercel.app/">
     <meta property="og:title" content="HADASSA — Designer & MC">
