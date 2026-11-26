@@ -1757,3 +1757,173 @@
         @media (prefers-reduced-motion: reduce) {
             html { scroll-behavior: auto; }
         }
+
+
+/* ========== HADASSA ANIMATED SPLASH SCREEN ========== */
+.hadassa-splash {
+    --splash-bg: #080808;
+    --splash-red: #e50914;
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    isolation: isolate;
+    color: #f5f5f0;
+    background: var(--splash-bg);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.75s ease, visibility 0.75s ease;
+}
+.hadassa-splash.is-leaving {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+.splash-atmosphere {
+    position: absolute;
+    inset: -25%;
+    z-index: -1;
+    background:
+        radial-gradient(ellipse at 50% 48%, rgba(229, 9, 20, 0.19), transparent 34%),
+        radial-gradient(ellipse at 50% 100%, rgba(139, 0, 0, 0.14), transparent 52%);
+    animation: splashAtmosphere 4s ease-in-out infinite alternate;
+}
+.splash-orbit {
+    position: absolute;
+    width: min(92vw, 540px);
+    height: auto;
+    color: rgba(229, 9, 20, 0.72);
+    overflow: visible;
+    animation: splashOrbit 18s linear infinite;
+}
+.splash-orbit path {
+    stroke-dasharray: 42 24;
+    animation: splashDash 3.2s linear infinite;
+}
+.splash-orbit circle {
+    transform-origin: center;
+    animation: splashPulse 3s ease-in-out infinite;
+}
+.splash-core {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 17px;
+    padding: 28px;
+    text-align: center;
+}
+.splash-word {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1px, 0.65vw, 7px);
+    font-family: var(--font-title, 'Syne', sans-serif);
+    font-size: clamp(2.5rem, 10vw, 5.7rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-shadow: 0 0 28px rgba(229, 9, 20, 0.24);
+}
+.splash-word span {
+    display: inline-block;
+    color: #f5f5f0;
+    opacity: 0;
+    transform: translateY(24px) scale(0.86);
+    animation: splashLetter 0.7s cubic-bezier(.2,.8,.2,1) forwards;
+    animation-delay: calc(var(--letter-index, 0) * 90ms + 180ms);
+}
+.splash-word span:nth-child(1) { --letter-index: 0; }
+.splash-word span:nth-child(2) { --letter-index: 1; }
+.splash-word span:nth-child(3) { --letter-index: 2; }
+.splash-word span:nth-child(4) { --letter-index: 3; }
+.splash-word span:nth-child(5) { --letter-index: 4; }
+.splash-word span:nth-child(6) { --letter-index: 5; }
+.splash-word span:nth-child(7) { --letter-index: 6; }
+.splash-word span:nth-child(4) { color: var(--splash-red); }
+.splash-rule {
+    width: min(62vw, 270px);
+    height: 2px;
+    overflow: hidden;
+    background: rgba(255,255,255,.13);
+}
+.splash-rule span {
+    display: block;
+    width: 42%;
+    height: 100%;
+    background: var(--splash-red);
+    box-shadow: 0 0 14px rgba(229,9,20,.9);
+    animation: splashProgress 1.8s ease-in-out infinite;
+}
+.splash-caption {
+    margin: 0;
+    color: rgba(245,245,240,.64);
+    font-family: var(--font-title, 'Syne', sans-serif);
+    font-size: clamp(.58rem, 2vw, .72rem);
+    font-weight: 600;
+    letter-spacing: .32em;
+}
+.splash-caption i { color: var(--splash-red); font-style: normal; padding: 0 .35em; }
+.splash-bottom {
+    position: absolute;
+    right: clamp(20px, 5vw, 56px);
+    bottom: clamp(20px, 4vh, 36px);
+    left: clamp(20px, 5vw, 56px);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    color: rgba(245,245,240,.42);
+    font-family: var(--font-title, 'Syne', sans-serif);
+    font-size: .58rem;
+    font-weight: 600;
+    letter-spacing: .16em;
+}
+.splash-loading { display: inline-flex; align-items: center; gap: 5px; }
+.splash-loading b {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--splash-red);
+    animation: splashDots .9s ease-in-out infinite alternate;
+}
+.splash-loading b:nth-child(2) { animation-delay: .18s; }
+.splash-loading b:nth-child(3) { animation-delay: .36s; }
+body.splash-active { overflow: hidden; }
+@keyframes splashLetter {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes splashProgress {
+    0% { transform: translateX(-115%); }
+    100% { transform: translateX(245%); }
+}
+@keyframes splashOrbit {
+    to { transform: rotate(360deg); }
+}
+@keyframes splashDash {
+    to { stroke-dashoffset: -132; }
+}
+@keyframes splashPulse {
+    50% { opacity: .35; transform: scale(.94); }
+}
+@keyframes splashAtmosphere {
+    to { transform: scale(1.13); opacity: .7; }
+}
+@keyframes splashDots {
+    to { opacity: .25; transform: translateY(-3px); }
+}
+@media (max-width: 480px) {
+    .splash-bottom { font-size: .48rem; letter-spacing: .1em; }
+    .splash-core { gap: 14px; }
+    .splash-orbit { width: 112vw; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hadassa-splash, .splash-atmosphere, .splash-orbit,
+    .splash-orbit path, .splash-orbit circle, .splash-word span,
+    .splash-rule span, .splash-loading b {
+        animation: none !important;
+        transition: none !important;
+    }
+    .splash-word span { opacity: 1; transform: none; }
+}
