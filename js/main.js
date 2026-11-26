@@ -560,13 +560,14 @@
         (config.grids || []).forEach((grid) => {
             const container = document.querySelector(grid.selector);
             if (!container || !Array.isArray(grid.order)) return;
-            const elements = grid.order.map((selector) => document.querySelector(selector)).filter((element) => element && element.parentElement === container);
-            elements.forEach((element) => container.appendChild(element));
+            const pairs = grid.order.map((selector) => ({ selector, element: document.querySelector(selector) }))
+                .filter((item) => item.element && item.element.parentElement === container);
+            pairs.forEach((item) => container.appendChild(item.element));
             const hiddenItems = new Set(grid.hidden || []);
-            elements.forEach((element) => {
-                const hidden = hiddenItems.has(grid.order[elements.indexOf(element)]);
-                element.hidden = hidden;
-                element.style.display = hidden ? 'none' : '';
+            pairs.forEach((item) => {
+                const hidden = hiddenItems.has(item.selector);
+                item.element.hidden = hidden;
+                item.element.style.display = hidden ? 'none' : '';
             });
         });
     } catch (error) {
