@@ -356,15 +356,18 @@
         .nav-desktop {
             display: flex;
             align-items: center;
-            gap: clamp(0.65rem, 1.1vw, 1rem);
-            flex: 1 1 auto;
+            gap: 0.3rem;
+            flex: 0 1 430px;
+            width: 100%;
             min-width: 0;
-            max-width: 510px;
-            margin: 0 1rem;
-            padding: 0.45rem 0.7rem;
+            max-width: 430px;
+            margin: 0 0.7rem;
+            padding: 0.32rem 0.5rem;
             overflow-x: auto;
             overflow-y: hidden;
             overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
             scrollbar-width: none;
             -ms-overflow-style: none;
             border: 1px solid var(--border);
@@ -374,18 +377,20 @@
         }
         .nav-desktop::-webkit-scrollbar {
             display: none;
+            width: 0;
+            height: 0;
         }
         .nav-desktop a {
             flex: 0 0 auto;
             font-family: var(--font-title);
-            font-size: 0.66rem;
+            font-size: 0.58rem;
             font-weight: 600;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.065em;
             text-transform: uppercase;
             color: var(--gray);
             transition: color var(--transition), background var(--transition);
             position: relative;
-            padding: 0.45rem 0.55rem;
+            padding: 0.34rem 0.42rem;
             border-radius: 999px;
         }
         .nav-desktop a::after {

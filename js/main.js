@@ -224,6 +224,9 @@
             const sections = document.querySelectorAll('section[id]');
             const navLinks = document.querySelectorAll('.nav-desktop a');
 
+            const desktopNav = document.querySelector('.nav-desktop');
+            let previousActiveLink = null;
+
             function updateActiveLink() {
                 const scrollPos = window.scrollY + 150;
                 let currentId = 'home';
@@ -232,8 +235,20 @@
                         currentId = section.id;
                     }
                 });
+
                 navLinks.forEach(link => {
-                    link.classList.toggle('active', link.getAttribute('href') === '#' + currentId);
+                    const isActive = link.getAttribute('href') === '#' + currentId;
+                    link.classList.toggle('active', isActive);
+
+                    if (isActive && link !== previousActiveLink && desktopNav) {
+                        // Recentrer immédiatement le lien actif, qu'il soit à gauche ou à droite.
+                        const targetLeft = link.offsetLeft - (desktopNav.clientWidth - link.offsetWidth) / 2;
+                        desktopNav.scrollTo({
+                            left: Math.max(0, Math.min(targetLeft, desktopNav.scrollWidth - desktopNav.clientWidth)),
+                            behavior: 'auto'
+                        });
+                        previousActiveLink = link;
+                    }
                 });
             }
             window.addEventListener('scroll', updateActiveLink, { passive: true });
