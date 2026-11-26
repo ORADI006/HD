@@ -1,6 +1,35 @@
 (function() {
             'use strict';
 
+            // ===== SPLASH SCREEN HADASSA =====
+            const hadassaSplash = document.getElementById('hadassaSplash');
+            if (hadassaSplash) {
+                document.body.classList.add('splash-active');
+                const splashStartedAt = performance.now();
+                const closeSplash = () => {
+                    const minimumDisplay = 1250;
+                    const elapsed = performance.now() - splashStartedAt;
+                    window.setTimeout(() => {
+                        hadassaSplash.classList.add('is-leaving');
+                        document.body.classList.remove('splash-active');
+                        window.setTimeout(() => hadassaSplash.remove(), 800);
+                    }, Math.max(0, minimumDisplay - elapsed));
+                };
+                if (document.readyState === 'complete') {
+                    closeSplash();
+                } else {
+                    window.addEventListener('load', closeSplash, { once: true });
+                }
+                // Évite de bloquer l'accès au site si une ressource externe tarde à charger.
+                window.setTimeout(() => {
+                    if (hadassaSplash.isConnected && !hadassaSplash.classList.contains('is-leaving')) {
+                        hadassaSplash.classList.add('is-leaving');
+                        document.body.classList.remove('splash-active');
+                        window.setTimeout(() => hadassaSplash.remove(), 800);
+                    }
+                }, 6500);
+            }
+
             // ===== CURSEUR PERSONNALISÉ =====
             const cursorDot = document.getElementById('cursorDot');
             const cursorCircle = document.getElementById('cursorCircle');
