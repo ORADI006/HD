@@ -1,7 +1,7 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm';
 import {initSiteEditor} from './site-editor.js';
 const SUPABASE_URL='https://cxwlfplkimnqlzmdsajj.supabase.co',KEY='sb_publishable_ISAB6iARgJB_F0n9kr4l-A_4NLPH4_n',ROOT='drivelinkxv76@gmail.com';
-const sb=createClient(SUPABASE_URL,KEY,{auth:{flowType:'pkce',detectSessionInUrl:false,persistSession:true,autoRefreshToken:true}}),$=s=>document.querySelector(s),S={user:null,admin:null,media:[],slots:[],content:[],admins:[]};
+const sb=createClient(SUPABASE_URL,KEY,{auth:{flowType:'pkce',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}}),$=s=>document.querySelector(s),S={user:null,admin:null,media:[],slots:[],content:[],admins:[]};
 let loadBuilder=null;
 const labels={projet_accueil:'Photo principale',experience_digital:'Vidéo Digital Experience',mc_mariage:'Vidéo MC Mariage'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -102,33 +102,11 @@ sb.auth.onAuthStateChange((_event,session)=>{
  // React to every auth event; the handler itself only schedules async work.
  processSession(session);
 });
-// Static-site OAuth callback: exchange the PKCE code explicitly before loading the admin UI.
-// This avoids relying on automatic URL detection during the Google redirect.
+// Supabase JS gère automatiquement le retour PKCE dans l’URL.
+// getSession() attend la fin de cette initialisation et récupère la session restaurée.
 async function restoreAuthSession(){
- const callbackUrl=new URL(window.location.href);
- const code=callbackUrl.searchParams.get('code');
- if(code){
-  const {data,error}=await sb.auth.exchangeCodeForSession(code);
-  callbackUrl.searchParams.delete('code');
-  callbackUrl.searchParams.delete('state');
-  history.replaceState(null,document.title,callbackUrl.pathname+callbackUrl.search+callbackUrl.hash);
-  if(error)throw new Error('Google a confirmé la connexion, mais la session sécurisée n’a pas pu être finalisée : '+error.message);
-  processSession(data.session);
-  return;
- }
- // Compatibility with a callback URL produced by an older implicit-flow deployment.
- const hashParams=new URLSearchParams(callbackUrl.hash.replace(/^#/,'') );
- const access_token=hashParams.get('access_token'),refresh_token=hashParams.get('refresh_token');
- if(access_token&&refresh_token){
-  const {data,error}=await sb.auth.setSession({access_token,refresh_token});
-  callbackUrl.hash='';
-  history.replaceState(null,document.title,callbackUrl.pathname+callbackUrl.search);
-  if(error)throw new Error('Le retour Google a été reçu, mais la session n’a pas pu être enregistrée : '+error.message);
-  processSession(data.session);
-  return;
- }
  const {data,error}=await sb.auth.getSession();
- if(error)throw error;
+ if(error)throw new Error('Google a confirmé la connexion, mais Supabase n’a pas pu restaurer la session : '+error.message);
  processSession(data.session);
 }
 restoreAuthSession().catch(error=>{
