@@ -21,8 +21,8 @@ Les nouveaux médias ajoutés au stockage Supabase doivent être enregistrés da
 Le back-office est accessible via `/admin.html` et utilise Supabase Auth avec Google OAuth.
 
 - `admin.html`, `admin/admin.css`, `admin/admin.js` : interface privée et workflows d’administration.
-- `supabase/migrations/20261126123300_hadassa_admin_foundation.sql` : tables, RLS, médias et journal d’activité.
-- `supabase/migrations/20261126124000_hadassa_admin_hardened_access.sql` : fonctions internes et politiques d’activation des invitations.
+- `supabase/migrations/20261126113608_hadassa_admin_foundation.sql` : tables, RLS, médias et journal d’activité.
+- `supabase/migrations/20261126114147_hadassa_admin_hardened_access.sql` : fonctions internes et politiques d’activation des invitations.
 
 Le premier compte autorisé est `drivelinkxv76@gmail.com`. L’activation se fait à la première connexion Google vérifiée. Le fournisseur Google doit être activé dans Supabase Auth et l’URL du site/prévisualisation doit être autorisée dans les URL de redirection.
 
