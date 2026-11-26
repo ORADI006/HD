@@ -6,6 +6,18 @@
     <title>HADASSA — Designer & MC | Portfolio Créatif</title>
     <meta name="description" content="HADASSA — Designer graphique / Digital Designer & Maître de cérémonie. Je transforme les idées en visuels puissants et les événements en expériences inoubliables.">
     <meta name="theme-color" content="#0a0a0a">
+    <script>
+        (function () {
+            try {
+                const savedTheme = localStorage.getItem('hadassa-theme');
+                if (savedTheme === 'light' || savedTheme === 'dark') {
+                    document.documentElement.dataset.theme = savedTheme;
+                }
+            } catch (error) {
+                // Le thème sombre reste le thème par défaut.
+            }
+        })();
+    </script>
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://hd-orpin-zeta.vercel.app/">
     <meta property="og:title" content="HADASSA — Designer & MC">
@@ -40,6 +52,21 @@
             --max-width: 1200px;
             --section-padding: clamp(4rem, 10vw, 8rem);
             --grain-opacity: 0.04;
+            color-scheme: dark;
+        }
+
+        /* Thème clair : palette ivoire, contrastes renforcés, accent rouge conservé. */
+        html[data-theme="light"] {
+            color-scheme: light;
+            --black: #f7f6f2;
+            --black-2: #eeece7;
+            --black-3: #e3e0d9;
+            --white: #171717;
+            --gray: #55534f;
+            --gray-dark: #77736d;
+            --border: rgba(20, 20, 20, 0.13);
+            --red-glow: rgba(229, 9, 20, 0.18);
+            --grain-opacity: 0.018;
         }
 
         *,
@@ -312,7 +339,32 @@
         .language-switcher button.active,
         .language-switcher button:hover {
             background: var(--red);
+            color: #fff;
+        }
+        .theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            min-height: 34px;
+            margin-right: 1rem;
+            padding: 0.35rem 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             color: var(--white);
+            font-family: var(--font-title);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            transition: color var(--transition), background var(--transition), border-color var(--transition);
+        }
+        .theme-toggle:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+        .theme-toggle-icon {
+            font-size: 1rem;
+            line-height: 1;
         }
         .logo {
             font-family: var(--font-title);
@@ -1598,7 +1650,58 @@
                 align-items: flex-start;
             }
         }
-            /* ========== ACCESSIBILITÉ & CONFORT ========== */
+            /* Adaptation des surfaces qui utilisent des couleurs sombres fixes. */
+        html[data-theme="light"] body {
+            background-color: var(--black);
+            color: var(--white);
+        }
+        html[data-theme="light"] .header {
+            background: rgba(247, 246, 242, 0.9);
+        }
+        html[data-theme="light"] .header.scrolled {
+            background: rgba(247, 246, 242, 0.97);
+        }
+        html[data-theme="light"] .mobile-menu {
+            background: rgba(247, 246, 242, 0.98);
+        }
+        html[data-theme="light"] .mobile-menu a,
+        html[data-theme="light"] .nav-desktop a:hover,
+        html[data-theme="light"] .nav-desktop a.active {
+            color: var(--white);
+        }
+        html[data-theme="light"] .hero {
+            background:
+                radial-gradient(ellipse at 30% 50%, rgba(139, 0, 0, 0.07) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 30%, rgba(229, 9, 20, 0.045) 0%, transparent 50%),
+                var(--black);
+        }
+        html[data-theme="light"] .hero::after {
+            background: linear-gradient(180deg, transparent 60%, var(--black) 100%);
+        }
+        html[data-theme="light"] .hero-photo-placeholder {
+            background: radial-gradient(ellipse at center, rgba(229, 9, 20, 0.05) 0%, transparent 70%), var(--black-2);
+            border-color: rgba(20, 20, 20, 0.2);
+        }
+        html[data-theme="light"] .language-switcher,
+        html[data-theme="light"] .theme-toggle {
+            border-color: var(--border);
+        }
+        html[data-theme="light"] .theme-toggle {
+            color: var(--white);
+        }
+        html[data-theme="light"] .btn-outline {
+            color: var(--white);
+            border-color: rgba(20, 20, 20, 0.3);
+        }
+        html[data-theme="light"] .btn-outline:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+        html[data-theme="light"] .footer {
+            background: var(--black-2);
+        }
+
+        /* ========== ACCESSIBILITÉ & CONFORT ========== */
         .skip-link {
             position: fixed;
             top: 0.75rem;
@@ -1645,6 +1748,11 @@
                 <a href="#events" data-i18n="nav-events">EVENTS</a>
                 <a href="#contact" data-i18n="nav-contact">CONTACT</a>
             </nav>
+
+            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Activer le mode clair" aria-pressed="false">
+                <span class="theme-toggle-icon" id="themeToggleIcon" aria-hidden="true">☀</span>
+                <span id="themeToggleText">Clair</span>
+            </button>
 
             <div class="language-switcher" role="group" aria-label="Choisir la langue">
                 <button type="button" data-language="fr">FR</button>
@@ -2107,6 +2215,37 @@
                 cursorCircle.style.display = 'none';
                 document.body.classList.remove('custom-cursor');
             }
+
+            // ===== THÈME CLAIR / SOMBRE =====
+            const themeToggle = document.getElementById('themeToggle');
+            const themeToggleIcon = document.getElementById('themeToggleIcon');
+            const themeToggleText = document.getElementById('themeToggleText');
+
+            function applyTheme(theme) {
+                const isLight = theme === 'light';
+                document.documentElement.dataset.theme = isLight ? 'light' : 'dark';
+                themeToggle.setAttribute('aria-pressed', String(isLight));
+                themeToggle.setAttribute('aria-label', isLight ? 'Activer le mode sombre' : 'Activer le mode clair');
+                themeToggleIcon.textContent = isLight ? '☾' : '☀';
+                themeToggleText.textContent = isLight ? 'Sombre' : 'Clair';
+                try {
+                    localStorage.setItem('hadassa-theme', isLight ? 'light' : 'dark');
+                } catch (error) {
+                    // Le thème fonctionne même si le stockage du navigateur est désactivé.
+                }
+            }
+
+            let savedTheme = 'dark';
+            try {
+                savedTheme = localStorage.getItem('hadassa-theme') || 'dark';
+            } catch (error) {
+                // Le thème sombre est utilisé par défaut.
+            }
+            applyTheme(savedTheme);
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.dataset.theme || 'dark';
+                applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            });
 
             // ===== HEADER SCROLL =====
             const header = document.getElementById('header');
