@@ -305,8 +305,17 @@
             align-items: center;
         }
         .header.scrolled {
-            background: rgba(10, 10, 10, 0.95);
+            background: rgba(10, 10, 10, 0.96);
             border-bottom-color: rgba(229, 9, 20, 0.2);
+            height: 62px;
+        }
+        .header,
+        .header-inner {
+            transition: height var(--transition), background var(--transition), border-color var(--transition);
+        }
+        .header.scrolled .nav-desktop {
+            padding-top: 0.3rem;
+            padding-bottom: 0.3rem;
         }
         .header-inner {
             display: flex;
@@ -383,17 +392,37 @@
         .nav-desktop {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: clamp(0.65rem, 1.1vw, 1rem);
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 510px;
+            margin: 0 1rem;
+            padding: 0.45rem 0.7rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            overscroll-behavior-x: contain;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.035);
+            white-space: nowrap;
+        }
+        .nav-desktop::-webkit-scrollbar {
+            display: none;
         }
         .nav-desktop a {
+            flex: 0 0 auto;
             font-family: var(--font-title);
-            font-size: 0.75rem;
+            font-size: 0.66rem;
             font-weight: 600;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
             color: var(--gray);
-            transition: color var(--transition);
+            transition: color var(--transition), background var(--transition);
             position: relative;
+            padding: 0.45rem 0.55rem;
+            border-radius: 999px;
         }
         .nav-desktop a::after {
             content: '';
@@ -408,6 +437,7 @@
         .nav-desktop a:hover,
         .nav-desktop a.active {
             color: var(--white);
+            background: rgba(229, 9, 20, 0.12);
         }
         .nav-desktop a:hover::after,
         .nav-desktop a.active::after {
@@ -1556,11 +1586,15 @@
                 letter-spacing: 0.08em;
             }
             .nav-desktop {
-                gap: 0.65rem;
+                gap: 0.35rem;
+                max-width: 430px;
+                margin: 0 0.5rem;
+                padding: 0.35rem 0.45rem;
             }
             .nav-desktop a {
-                font-size: 0.62rem;
-                letter-spacing: 0.1em;
+                font-size: 0.58rem;
+                letter-spacing: 0.07em;
+                padding: 0.4rem 0.45rem;
             }
             .language-switcher {
                 margin-right: 0.5rem;
