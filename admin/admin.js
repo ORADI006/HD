@@ -8,8 +8,8 @@ function can(p){return S.admin?.role==='super_admin'||S.admin?.permissions?.[p]=
 async function log(action,type,id,details={}){await sb.from('hadassa_admin_audit_log').insert({actor_user_id:S.user.id,actor_email:S.user.email,action,entity_type:type,entity_id:String(id||''),details})}
 async function start(user){
  S.user=user;let email=(user.email||'').toLowerCase();
- if(email===ROOT){let r=await sb.rpc('bootstrap_hadassa_super_admin');if(r.error)throw r.error}
- else{let r=await sb.rpc('claim_hadassa_admin_invite');if(r.error)throw r.error;if(!r.data)throw Error('Cette adresse Google n’a pas été invitée par le Super Admin.')}
+ if(email===ROOT){let r=await sb.from('hadassa_admin_users').upsert({email:ROOT,user_id:user.id,role:'super_admin',permissions:{},is_active:true},{onConflict:'email'});if(r.error)throw r.error}
+ else{let invite=await sb.from('hadassa_admin_users').select('id,user_id').eq('email',email).eq('is_active',true).maybeSingle();if(invite.error)throw invite.error;if(!invite.data)throw Error('Cette adresse Google n’a pas été invitée par le Super Admin.');if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Cette invitation est déjà liée à un autre compte Google.');if(!invite.data.user_id){let claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null);if(claim.error)throw claim.error}}
  let q=await sb.from('hadassa_admin_users').select('*').eq('user_id',user.id).eq('is_active',true).maybeSingle();if(q.error)throw q.error;if(!q.data)throw Error('Accès administration non autorisé.');
  S.admin=q.data;$('#login').hidden=true;$('#app').hidden=false;$('#user-email').textContent=user.email;$('#user-role').textContent=q.data.role.toUpperCase();
  if(q.data.role!=='super_admin'){$('#admins-nav').hidden=true;document.querySelectorAll('.super-only').forEach(x=>x.hidden=true)}
