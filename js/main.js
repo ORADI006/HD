@@ -224,6 +224,9 @@
             const sections = document.querySelectorAll('section[id]');
             const navLinks = document.querySelectorAll('.nav-desktop a');
 
+            const desktopNav = document.querySelector('.nav-desktop');
+            let previousActiveLink = null;
+
             function updateActiveLink() {
                 const scrollPos = window.scrollY + 150;
                 let currentId = 'home';
@@ -232,8 +235,24 @@
                         currentId = section.id;
                     }
                 });
+
                 navLinks.forEach(link => {
-                    link.classList.toggle('active', link.getAttribute('href') === '#' + currentId);
+                    const isActive = link.getAttribute('href') === '#' + currentId;
+                    link.classList.toggle('active', isActive);
+
+                    if (isActive && link !== previousActiveLink && desktopNav) {
+                        const navBounds = desktopNav.getBoundingClientRect();
+                        const linkBounds = link.getBoundingClientRect();
+
+                        if (linkBounds.left < navBounds.left || linkBounds.right > navBounds.right) {
+                            const targetLeft = link.offsetLeft - desktopNav.clientWidth / 2 + link.offsetWidth / 2;
+                            desktopNav.scrollTo({
+                                left: Math.max(0, targetLeft),
+                                behavior: shouldReduceMotion ? 'auto' : 'smooth'
+                            });
+                        }
+                        previousActiveLink = link;
+                    }
                 });
             }
             window.addEventListener('scroll', updateActiveLink, { passive: true });
