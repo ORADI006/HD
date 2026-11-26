@@ -1468,6 +1468,11 @@
             flex: 0 0 1.2rem;
             object-fit: contain;
         }
+
+        /* Threads et TikTok : logos noirs en thème clair, blancs en thème sombre. */
+        html[data-theme="light"] .social-icon-dark-on-light {
+            filter: brightness(0);
+        }
         .footer-links a {
             gap: 0.55rem;
         }
