@@ -120,7 +120,7 @@ function cloneDefaults(scan) {
     images: scan.images.map((item) => ({ selector: item.selector, src: item.src, alt: item.alt, label: item.label })),
     links: scan.links.map((item) => ({ selector: item.selector, href: item.href, label: item.label })),
     sections: scan.sections.map((item) => ({ ...item })),
-    grids: scan.grids.map((grid) => ({ selector: grid.selector, label: grid.label, order: grid.items.map((item) => item.selector), labels: grid.items.map((item) => item.label) }))
+    grids: scan.grids.map((grid) => ({ selector: grid.selector, label: grid.label, order: grid.items.map((item) => item.selector), labels: grid.items.map((item) => item.label), hidden: [] }))
   };
 }
 
@@ -152,7 +152,7 @@ function renderEditor(root, state, scan) {
   const gridRows = state.grids.map((grid, gridIndex) => {
     const rows = grid.order.map((selector, itemIndex) => {
       const label = grid.labels[scan.grids.find((candidate) => candidate.selector === grid.selector)?.items.findIndex((item) => item.selector === selector)] || ('Élément ' + (itemIndex + 1));
-      return '<div class="builder-section-row"><b>' + escapeHtml(label) + '</b><div class="builder-move"><button type="button" data-grid-move="' + gridIndex + '" data-item="' + itemIndex + '" data-dir="-1" ' + (itemIndex === 0 ? 'disabled' : '') + '>↑</button><button type="button" data-grid-move="' + gridIndex + '" data-item="' + itemIndex + '" data-dir="1" ' + (itemIndex === grid.order.length - 1 ? 'disabled' : '') + '>↓</button></div></div>';
+      return '<div class="builder-section-row"><label class="check"><input type="checkbox" data-grid-visible="' + gridIndex + '" data-grid-selector="' + escapeHtml(selector) + '" ' + (!(grid.hidden || []).includes(selector) ? 'checked' : '') + '> ' + escapeHtml(label) + '</label><div class="builder-move"><button type="button" data-grid-move="' + gridIndex + '" data-item="' + itemIndex + '" data-dir="-1" ' + (itemIndex === 0 ? 'disabled' : '') + '>↑</button><button type="button" data-grid-move="' + gridIndex + '" data-item="' + itemIndex + '" data-dir="1" ' + (itemIndex === grid.order.length - 1 ? 'disabled' : '') + '>↓</button></div></div>';
     }).join('');
     return '<details class="builder-group"><summary>' + escapeHtml(grid.label) + ' <small>' + grid.order.length + ' éléments</small></summary>' + rows + '</details>';
   }).join('');
@@ -219,6 +219,13 @@ export function initSiteEditor({ toast, log, user }) {
     if (target.matches('[data-section-visible]')) {
       const section = state.sections.find((item) => item.id === target.dataset.sectionVisible);
       if (section) section.visible = target.checked;
+    }
+    if (target.matches('[data-grid-visible]')) {
+      const grid = state.grids[Number(target.dataset.gridVisible)];
+      const selector = target.dataset.gridSelector;
+      grid.hidden = grid.hidden || [];
+      if (target.checked) grid.hidden = grid.hidden.filter((item) => item !== selector);
+      else if (!grid.hidden.includes(selector)) grid.hidden.push(selector);
     }
   });
 
