@@ -548,7 +548,7 @@
 
         (config.sections || []).forEach((section) => {
             const element = document.getElementById(section.id);
-            if (element) element.hidden = section.visible === false;
+            if (element) { element.hidden = section.visible === false; element.style.display = section.visible === false ? 'none' : ''; }
         });
 
         const mainElement = document.querySelector('main');
@@ -562,6 +562,12 @@
             if (!container || !Array.isArray(grid.order)) return;
             const elements = grid.order.map((selector) => document.querySelector(selector)).filter((element) => element && element.parentElement === container);
             elements.forEach((element) => container.appendChild(element));
+            const hiddenItems = new Set(grid.hidden || []);
+            elements.forEach((element) => {
+                const hidden = hiddenItems.has(grid.order[elements.indexOf(element)]);
+                element.hidden = hidden;
+                element.style.display = hidden ? 'none' : '';
+            });
         });
     } catch (error) {
         console.warn('Les contenus HADASSA restent sur leur version HTML :', error);
