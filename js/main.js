@@ -522,7 +522,14 @@
         (config.fields || []).forEach((field) => {
             if (!field.selector) return;
             const element = document.querySelector(field.selector);
-            if (element) element.textContent = field.value == null ? '' : String(field.value);
+            if (!element) return;
+            const value = field.value == null ? '' : String(field.value);
+            const node = Number.isInteger(field.nodeIndex) ? element.childNodes[field.nodeIndex] : null;
+            if (node && node.nodeType === Node.TEXT_NODE) {
+                node.textContent = (field.prefix || '') + value + (field.suffix || '');
+            } else if (!Number.isInteger(field.nodeIndex)) {
+                element.textContent = value;
+            }
         });
 
         (config.images || []).forEach((image) => {
