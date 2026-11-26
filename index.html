@@ -1172,15 +1172,16 @@
         }
         .events-gallery {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: clamp(0.75rem, 2vw, 1.25rem);
-            margin-top: 3rem;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
             align-items: stretch;
         }
         .event-photo {
             position: relative;
-            aspect-ratio: 4 / 3;
+            width: 100%;
             min-width: 0;
+            aspect-ratio: 16 / 10;
             background: var(--black-3);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -1195,11 +1196,11 @@
         .event-photo img {
             width: 100%;
             height: 100%;
-            max-width: none;
+            max-width: 100%;
             object-fit: contain;
             object-position: center;
             display: block;
-            padding: 0.35rem;
+            padding: 0.2rem;
             transition: transform 0.55s ease;
         }
         .event-photo:hover {
@@ -1212,20 +1213,25 @@
         }
         .events-quote {
             position: relative;
+            box-sizing: border-box;
+            width: 100%;
             max-width: 820px;
-            margin: 2.5rem auto 2rem;
-            padding: clamp(1.5rem, 4vw, 2.25rem) clamp(1.25rem, 4vw, 2.5rem);
+            min-width: 0;
+            margin: 2rem auto;
+            padding: clamp(1rem, 4vw, 2.25rem);
             border: 1px solid var(--border);
             border-left: 3px solid var(--red);
             border-radius: 12px;
             background: linear-gradient(135deg, var(--black-2), var(--black-3));
             color: var(--white);
             font-family: var(--font-title);
-            font-size: clamp(1.05rem, 2.5vw, 1.45rem);
+            font-size: clamp(0.95rem, 3.8vw, 1.45rem);
             font-weight: 600;
             font-style: italic;
             line-height: 1.55;
             text-align: center;
+            overflow-wrap: anywhere;
+            word-break: normal;
             box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
         }
         /* ========== TESTIMONIALS ========== */
@@ -1508,6 +1514,9 @@
             .events-gallery {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+            .event-photo {
+                aspect-ratio: 4 / 3;
+            }
             .footer-grid {
                 grid-template-columns: 2fr 1fr 1fr;
             }
@@ -1516,6 +1525,9 @@
         @media (min-width: 1024px) {
             .events-gallery {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            .event-photo {
+                aspect-ratio: 4 / 3;
             }
             .services-grid {
                 grid-template-columns: repeat(3, 1fr);
