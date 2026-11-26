@@ -1,6 +1,8 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm';
+import {initSiteEditor} from './site-editor.js';
 const URL='https://cxwlfplkimnqlzmdsajj.supabase.co',KEY='sb_publishable_ISAB6iARgJB_F0n9kr4l-A_4NLPH4_n',ROOT='drivelinkxv76@gmail.com';
 const sb=createClient(URL,KEY),$=s=>document.querySelector(s),S={user:null,admin:null,media:[],slots:[],content:[],admins:[]};
+let loadBuilder=null;
 const labels={projet_accueil:'Photo principale',experience_digital:'Vidéo Digital Experience',mc_mariage:'Vidéo MC Mariage'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(t){let e=$('#toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),3500)}
@@ -11,17 +13,17 @@ async function start(user){
  if(email===ROOT){let r=await sb.from('hadassa_admin_users').upsert({email:ROOT,user_id:user.id,role:'super_admin',permissions:{},is_active:true},{onConflict:'email'});if(r.error)throw r.error}
  else{let invite=await sb.from('hadassa_admin_users').select('id,user_id').eq('email',email).eq('is_active',true).maybeSingle();if(invite.error)throw invite.error;if(!invite.data)throw Error('Cette adresse Google n’a pas été invitée par le Super Admin.');if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Cette invitation est déjà liée à un autre compte Google.');if(!invite.data.user_id){let claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null);if(claim.error)throw claim.error}}
  let q=await sb.from('hadassa_admin_users').select('*').eq('user_id',user.id).eq('is_active',true).maybeSingle();if(q.error)throw q.error;if(!q.data)throw Error('Accès administration non autorisé.');
- S.admin=q.data;$('#login').hidden=true;$('#app').hidden=false;$('#user-email').textContent=user.email;$('#user-role').textContent=q.data.role.toUpperCase();
+ S.admin=q.data;loadBuilder=initSiteEditor({toast,log,user});$('#login').hidden=true;$('#app').hidden=false;$('#user-email').textContent=user.email;$('#user-role').textContent=q.data.role.toUpperCase();
  if(q.data.role!=='super_admin'){$('#admins-nav').hidden=true;document.querySelectorAll('.super-only').forEach(x=>x.hidden=true)}
  if(!can('media.manage'))document.querySelector('[data-view=media]').hidden=true;
- if(!can('content.manage'))document.querySelector('[data-view=content]').hidden=true;
+ if(!can('content.manage')){document.querySelector('[data-view=content]').hidden=true;document.querySelector('[data-view=builder]').hidden=true;}
  await overview();
 }
 async function overview(){
  let [m,s,c,a]=await Promise.all([sb.from('media_assets').select('id',{count:'exact',head:true}),sb.from('media_rotation_slots').select('slot_key',{count:'exact',head:true}),sb.from('hadassa_site_content').select('content_key',{count:'exact',head:true}),S.admin.role==='super_admin'?sb.from('hadassa_admin_users').select('id',{count:'exact',head:true}):Promise.resolve({count:1})]);
  $('#s-media').textContent=m.count??'—';$('#s-slots').textContent=s.count??'—';$('#s-content').textContent=c.count??'—';$('#s-admin').textContent=a.count??'—';
 }
-function go(v){document.querySelectorAll('.view').forEach(x=>x.hidden=x.id!=='view-'+v);document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===v));$('#heading').textContent=({home:'Vue générale',media:'Médias',content:'Contenus du site',admins:'Administrateurs'})[v];if(v==='media')loadMedia().catch(err=>toast(err.message));if(v==='content')loadContent().catch(err=>toast(err.message));if(v==='admins')loadAdmins().catch(err=>toast(err.message))}
+function go(v){document.querySelectorAll('.view').forEach(x=>x.hidden=x.id!=='view-'+v);document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===v));$('#heading').textContent=({home:'Vue générale',media:'Médias',content:'Bibliothèque CMS',builder:'Éditeur visuel du site',admins:'Administrateurs'})[v];if(v==='media')loadMedia().catch(err=>toast(err.message));if(v==='content')loadContent().catch(err=>toast(err.message));if(v==='builder'&&loadBuilder)loadBuilder().catch(err=>toast(err.message));if(v==='admins')loadAdmins().catch(err=>toast(err.message))}
 function url(m){return m.external_url|| (m.storage_path?sb.storage.from('hadassa-media').getPublicUrl(m.storage_path).data.publicUrl:'')}
 async function loadMedia(){
  let [m,s]=await Promise.all([sb.from('media_assets').select('*').order('position'),sb.from('media_rotation_slots').select('*,current_media:media_assets!media_rotation_slots_current_media_fk(*)').order('slot_key')]);if(m.error||s.error)throw m.error||s.error;S.media=m.data||[];S.slots=s.data||[];
