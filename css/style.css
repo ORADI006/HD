@@ -803,6 +803,23 @@
                 transform: translateX(-50%) translateY(-8px);
             }
         }
+        /* Carte flottante de l'accueil : contraste adapté au thème clair. */
+        html[data-theme="light"] .hero-float-card {
+            background: rgba(255, 255, 255, 0.94);
+            border-color: rgba(229, 9, 20, 0.38);
+            box-shadow: 0 10px 35px rgba(30, 24, 18, 0.14), 0 0 18px rgba(229, 9, 20, 0.08);
+        }
+
+        html[data-theme="light"] .hero-float-card span:not(.dot) {
+            color: #24211f;
+        }
+
+        html[data-theme="light"] .hero-float-card .dot {
+            background: #e50914;
+            box-shadow: 0 0 10px rgba(229, 9, 20, 0.45);
+        }
+
+
 
         /* ========== ANIMATIONS DE SCROLL ========== */
         .fade-in {
