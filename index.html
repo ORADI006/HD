@@ -2623,5 +2623,74 @@
 
         })();
     </script>
+
+    <script>
+        // ===== CONTENUS VISUELS ROTATIFS HADASSA (pilotés par Supabase) =====
+        (async function loadHadassaRotatingMedia() {
+            const SUPABASE_URL = 'https://cxwlfplkimnqlzmdsajj.supabase.co';
+            const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ISAB6iARgJB_F0n9kr4l-A_4NLPH4_n';
+
+            try {
+                const response = await fetch(
+                    SUPABASE_URL + '/rest/v1/media_rotation_slots?select=slot_key,current_media:media_assets!media_rotation_slots_current_media_fk(media_type,external_url,storage_path)&order=slot_key.asc',
+                    {
+                        headers: {
+                            apikey: SUPABASE_PUBLISHABLE_KEY,
+                            Authorization: 'Bearer ' + SUPABASE_PUBLISHABLE_KEY
+                        },
+                        cache: 'no-store'
+                    }
+                );
+
+                if (!response.ok) throw new Error('Supabase media request failed: ' + response.status);
+                const slots = await response.json();
+
+                const mediaUrl = (media) => {
+                    if (!media) return null;
+                    if (media.external_url) return media.external_url;
+                    if (media.storage_path) {
+                        return SUPABASE_URL + '/storage/v1/object/public/hadassa-media/' +
+                            media.storage_path.split('/').map(encodeURIComponent).join('/');
+                    }
+                    return null;
+                };
+
+                slots.forEach((slot) => {
+                    const media = Array.isArray(slot.current_media) ? slot.current_media[0] : slot.current_media;
+                    const url = mediaUrl(media);
+                    if (!url || !media) return;
+
+                    if (slot.slot_key === 'projet_accueil' && media.media_type === 'image') {
+                        const heroImage = document.querySelector('#heroPhotoPlaceholder img');
+                        if (heroImage) {
+                            heroImage.src = url;
+                            heroImage.removeAttribute('srcset');
+                        }
+                    }
+
+                    if (slot.slot_key === 'experience_digital' && media.media_type === 'video') {
+                        const video = document.querySelector('video[aria-label="Vidéo Digital Experience"]');
+                        const source = video && video.querySelector('source');
+                        if (source && source.src !== url) {
+                            source.src = url;
+                            video.load();
+                        }
+                    }
+
+                    if (slot.slot_key === 'mc_mariage' && media.media_type === 'video') {
+                        const video = document.querySelector('video[aria-label="Vidéo MC mariage"]');
+                        const source = video && video.querySelector('source');
+                        if (source && source.src !== url) {
+                            source.src = url;
+                            video.load();
+                        }
+                    }
+                });
+            } catch (error) {
+                console.warn('Les médias HADASSA restent sur les fichiers locaux :', error);
+            }
+        })();
+    </script>
+
 </body>
 </html>
