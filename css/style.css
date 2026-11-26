@@ -368,22 +368,17 @@
             overscroll-behavior-x: contain;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-x;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(229, 9, 20, 0.55) transparent;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
             border: 1px solid var(--border);
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.035);
             white-space: nowrap;
         }
         .nav-desktop::-webkit-scrollbar {
-            height: 3px;
-        }
-        .nav-desktop::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .nav-desktop::-webkit-scrollbar-thumb {
-            background: rgba(229, 9, 20, 0.55);
-            border-radius: 999px;
+            display: none;
+            width: 0;
+            height: 0;
         }
         .nav-desktop a {
             flex: 0 0 auto;
