@@ -1761,7 +1761,7 @@
 
 /* ========== HADASSA ANIMATED SPLASH SCREEN ========== */
 .hadassa-splash {
-    --splash-bg: #080808;
+    --splash-bg: #f7f6f2;
     --splash-red: #e50914;
     position: fixed;
     inset: 0;
@@ -1770,7 +1770,7 @@
     place-items: center;
     overflow: hidden;
     isolation: isolate;
-    color: #f5f5f0;
+    color: #171717;
     background: var(--splash-bg);
     opacity: 1;
     visibility: visible;
@@ -1786,8 +1786,8 @@
     inset: -25%;
     z-index: -1;
     background:
-        radial-gradient(ellipse at 50% 48%, rgba(229, 9, 20, 0.19), transparent 34%),
-        radial-gradient(ellipse at 50% 100%, rgba(139, 0, 0, 0.14), transparent 52%);
+        radial-gradient(ellipse at 50% 48%, rgba(229, 9, 20, 0.09), transparent 34%),
+        radial-gradient(ellipse at 50% 100%, rgba(139, 0, 0, 0.045), transparent 52%);
     animation: splashAtmosphere 4s ease-in-out infinite alternate;
 }
 .splash-orbit {
@@ -1829,7 +1829,7 @@
 }
 .splash-word span {
     display: inline-block;
-    color: #f5f5f0;
+    color: #171717;
     opacity: 0;
     transform: translateY(24px) scale(0.86);
     animation: splashLetter 0.7s cubic-bezier(.2,.8,.2,1) forwards;
@@ -1847,7 +1847,7 @@
     width: min(62vw, 270px);
     height: 2px;
     overflow: hidden;
-    background: rgba(255,255,255,.13);
+    background: rgba(23,23,23,.13);
 }
 .splash-rule span {
     display: block;
@@ -1859,7 +1859,7 @@
 }
 .splash-caption {
     margin: 0;
-    color: rgba(245,245,240,.64);
+    color: rgba(23,23,23,.62);
     font-family: var(--font-title, 'Syne', sans-serif);
     font-size: clamp(.58rem, 2vw, .72rem);
     font-weight: 600;
@@ -1874,7 +1874,7 @@
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    color: rgba(245,245,240,.42);
+    color: rgba(23,23,23,.48);
     font-family: var(--font-title, 'Syne', sans-serif);
     font-size: .58rem;
     font-weight: 600;
