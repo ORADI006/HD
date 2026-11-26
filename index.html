@@ -1170,46 +1170,63 @@
             color: var(--gray);
             margin-top: 0.5rem;
         }
-        .events-quote {
-            font-size: clamp(1.2rem, 3vw, 1.6rem);
-            font-weight: 300;
-            color: var(--white);
-            font-style: italic;
-            max-width: 700px;
-            margin: 2rem 0;
-            line-height: 1.6;
-        }
         .events-gallery {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: clamp(0.75rem, 2vw, 1.25rem);
             margin-top: 3rem;
+            align-items: stretch;
         }
         .event-photo {
-            aspect-ratio: 4/3;
-            background: var(--black-2);
+            position: relative;
+            aspect-ratio: 4 / 3;
+            min-width: 0;
+            background: var(--black-3);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: var(--font-title);
-            font-size: 0.8rem;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.2);
-            transition: border-color var(--transition);
             overflow: hidden;
+            isolation: isolate;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+            transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
         }
         .event-photo img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            object-position: top center;
+            max-width: none;
+            object-fit: contain;
+            object-position: center;
             display: block;
+            padding: 0.35rem;
+            transition: transform 0.55s ease;
         }
         .event-photo:hover {
-            border-color: rgba(229, 9, 20, 0.3);
+            border-color: rgba(229, 9, 20, 0.45);
+            box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28), 0 0 22px rgba(229, 9, 20, 0.08);
+            transform: translateY(-3px);
+        }
+        .event-photo:hover img {
+            transform: scale(1.025);
+        }
+        .events-quote {
+            position: relative;
+            max-width: 820px;
+            margin: 2.5rem auto 2rem;
+            padding: clamp(1.5rem, 4vw, 2.25rem) clamp(1.25rem, 4vw, 2.5rem);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--red);
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--black-2), var(--black-3));
+            color: var(--white);
+            font-family: var(--font-title);
+            font-size: clamp(1.05rem, 2.5vw, 1.45rem);
+            font-weight: 600;
+            font-style: italic;
+            line-height: 1.55;
+            text-align: center;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
         }
         /* ========== TESTIMONIALS ========== */
         .testimonials-grid {
@@ -1489,7 +1506,7 @@
                 grid-template-columns: repeat(2, 1fr);
             }
             .events-gallery {
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .footer-grid {
                 grid-template-columns: 2fr 1fr 1fr;
@@ -1497,6 +1514,9 @@
         }
 
         @media (min-width: 1024px) {
+            .events-gallery {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
             .services-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
