@@ -1,7 +1,7 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm';
 import {initSiteEditor} from './site-editor.js';
 const URL='https://cxwlfplkimnqlzmdsajj.supabase.co',KEY='sb_publishable_ISAB6iARgJB_F0n9kr4l-A_4NLPH4_n',ROOT='drivelinkxv76@gmail.com';
-const sb=createClient(URL,KEY),$=s=>document.querySelector(s),S={user:null,admin:null,media:[],slots:[],content:[],admins:[]};
+const sb=createClient(URL,KEY,{auth:{flowType:'pkce',detectSessionInUrl:false,persistSession:true,autoRefreshToken:true}}),$=s=>document.querySelector(s),S={user:null,admin:null,media:[],slots:[],content:[],admins:[]};
 let loadBuilder=null;
 const labels={projet_accueil:'Photo principale',experience_digital:'Vidéo Digital Experience',mc_mariage:'Vidéo MC Mariage'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -48,7 +48,7 @@ async function loadAdmins(){if(S.admin.role!=='super_admin')return;let r=await s
 async function patchAdmin(id,patch){let a=S.admins.find(x=>x.id===id);if(!a||a.role==='super_admin')return;let r=await sb.from('hadassa_admin_users').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;await log('update_admin','hadassa_admin_users',id,patch);await loadAdmins()}
 async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Accès créé. L’invité peut se connecter avec Google.');await loadAdmins();await overview()}
 function err(e){console.error(e);toast(e.message||'Erreur inattendue.')}
-$('#google').onclick=async()=>{let r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,queryParams:{prompt:'select_account'}}});if(r.error)$('#login-msg').textContent=r.error.message};
+$('#google').onclick=async()=>{const btn=$('#google');btn.disabled=true;$('#login-msg').textContent='Redirection vers Google…';const redirectTo=new URL('/admin.html',window.location.origin).toString();const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo,queryParams:{prompt:'select_account'}}});if(r.error){$('#login-msg').textContent='Connexion Google impossible : '+r.error.message;btn.disabled=false;}};
 $('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 document.querySelectorAll('[data-view],[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view||b.dataset.go)));
 $('#add-content').onclick=()=>edit(null);$('#content-form').onsubmit=e=>saveContent(e).catch(err);$('#add-admin').onclick=()=>$('#admin-dialog').showModal();$('#admin-form').onsubmit=e=>addAdmin(e).catch(err);
@@ -86,8 +86,38 @@ sb.auth.onAuthStateChange((_event,session)=>{
  // React to every auth event; the handler itself only schedules async work.
  processSession(session);
 });
-// Explicit initial read prevents a missed INITIAL_SESSION event during page startup.
-sb.auth.getSession().then(({data,error})=>{
- if(error){$('#login-msg').textContent='Impossible de lire la session : '+error.message;return;}
+// Static-site OAuth callback: exchange the PKCE code explicitly before loading the admin UI.
+// This avoids relying on automatic URL detection during the Google redirect.
+async function restoreAuthSession(){
+ const callbackUrl=new URL(window.location.href);
+ const code=callbackUrl.searchParams.get('code');
+ if(code){
+  const {data,error}=await sb.auth.exchangeCodeForSession(code);
+  callbackUrl.searchParams.delete('code');
+  callbackUrl.searchParams.delete('state');
+  history.replaceState(null,document.title,callbackUrl.pathname+callbackUrl.search+callbackUrl.hash);
+  if(error)throw new Error('Google a confirmé la connexion, mais la session sécurisée n’a pas pu être finalisée : '+error.message);
+  processSession(data.session);
+  return;
+ }
+ // Compatibility with a callback URL produced by an older implicit-flow deployment.
+ const hashParams=new URLSearchParams(callbackUrl.hash.replace(/^#/,'') );
+ const access_token=hashParams.get('access_token'),refresh_token=hashParams.get('refresh_token');
+ if(access_token&&refresh_token){
+  const {data,error}=await sb.auth.setSession({access_token,refresh_token});
+  callbackUrl.hash='';
+  history.replaceState(null,document.title,callbackUrl.pathname+callbackUrl.search);
+  if(error)throw new Error('Le retour Google a été reçu, mais la session n’a pas pu être enregistrée : '+error.message);
+  processSession(data.session);
+  return;
+ }
+ const {data,error}=await sb.auth.getSession();
+ if(error)throw error;
  processSession(data.session);
-}).catch(error=>{$('#login-msg').textContent='Erreur de session : '+error.message;});
+}
+restoreAuthSession().catch(error=>{
+ console.error('HADASSA OAuth callback failed:',error);
+ $('#login').hidden=false;$('#app').hidden=true;
+ $('#login-msg').textContent=error.message||'Impossible de restaurer la session Google.';
+ $('#google').disabled=false;
+});
