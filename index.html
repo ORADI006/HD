@@ -7,20 +7,22 @@
     <meta name="description" content="HADASSA — Designer graphique / Digital Designer & Maître de cérémonie. Je transforme les idées en visuels puissants et les événements en expériences inoubliables.">
     <meta name="theme-color" content="#0a0a0a">
     <script>
-    // Secours OAuth : si Supabase retombe sur la Site URL (/) au lieu de /admin.html,
-    // transférer immédiatement le code PKCE vers la page qui sait finaliser la session.
+    // Supabase peut revenir sur la Site URL avec des paramètres OAuth en query
+    // ou dans le fragment. Dans les deux cas, transférer immédiatement vers l'admin.
     (function () {
         const current = new URL(window.location.href);
         const isHome = current.pathname === '/' || current.pathname === '/index.html';
-        const hasAuthCallback = current.searchParams.has('code') ||
-            current.searchParams.has('error') ||
-            current.searchParams.has('error_description');
+        const hash = new URLSearchParams(current.hash.replace(/^#/, ''));
+        const hasAuthCallback = ['code', 'error', 'error_description', 'access_token',
+            'refresh_token', 'token_type', 'type', 'token_hash'].some(key =>
+                current.searchParams.has(key) || hash.has(key)
+            );
         if (isHome && hasAuthCallback) {
             current.pathname = '/admin.html';
             window.location.replace(current.pathname + current.search + current.hash);
         }
     })();
-    </script>
+    </script>ipt>
     <script src="js/theme.js"></script>
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://hd-orpin-zeta.vercel.app/">
