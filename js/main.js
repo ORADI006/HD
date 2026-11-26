@@ -249,22 +249,47 @@
                 }
             });
 
-            // ===== NAVIGATION ACTIVE =====
+            // ===== NAVIGATION ACTIVE + DÉFILEMENT AUTOMATIQUE =====
             const sections = document.querySelectorAll('section[id]');
             const navLinks = document.querySelectorAll('.nav-desktop a');
+            const desktopNav = document.querySelector('.nav-desktop');
+            let previousActiveLink = null;
 
             function updateActiveLink() {
                 const scrollPos = window.scrollY + 150;
                 let currentId = 'home';
+
                 sections.forEach(section => {
                     if (scrollPos >= section.offsetTop) {
                         currentId = section.id;
                     }
                 });
+
                 navLinks.forEach(link => {
-                    link.classList.toggle('active', link.getAttribute('href') === '#' + currentId);
+                    const isActive = link.getAttribute('href') === '#' + currentId;
+                    link.classList.toggle('active', isActive);
+
+                    // Recentrer le lien actif dès que l'utilisateur change de section,
+                    // aussi bien vers la gauche que vers la droite.
+                    if (isActive && link !== previousActiveLink && desktopNav) {
+                        const navBounds = desktopNav.getBoundingClientRect();
+                        const linkBounds = link.getBoundingClientRect();
+                        const targetLeft = desktopNav.scrollLeft
+                            + (linkBounds.left - navBounds.left)
+                            - (desktopNav.clientWidth - linkBounds.width) / 2;
+
+                        desktopNav.scrollTo({
+                            left: Math.max(0, Math.min(
+                                targetLeft,
+                                desktopNav.scrollWidth - desktopNav.clientWidth
+                            )),
+                            behavior: 'auto'
+                        });
+                        previousActiveLink = link;
+                    }
                 });
             }
+
             window.addEventListener('scroll', updateActiveLink, { passive: true });
             updateActiveLink();
 
