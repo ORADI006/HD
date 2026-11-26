@@ -28,4 +28,4 @@ Le premier compte autorisé est `drivelinkxv76@gmail.com`. L’activation se fai
 
 Les administrateurs invités sont liés à leur adresse e-mail Google. Les rôles disponibles sont Super Admin, Administrateur et Éditeur. Les droits de gestion des médias et des contenus sont vérifiés par les politiques RLS côté base de données.
 
-Le CMS permet déjà d’enregistrer des blocs de contenu JSON. Le raccordement de l’ensemble des champs de ces blocs au portfolio public reste une étape d’intégration distincte avant validation finale.
+L’éditeur visuel du site (`admin/site-editor.js`) analyse la structure HTML du portfolio et permet de modifier les textes existants, les adresses des images, les liens et boutons, l’ordre des sections, leur visibilité ainsi que l’ordre et la visibilité des cartes/grilles. Les changements sont enregistrés dans `hadassa_site_content` sous la clé `site.builder.v1`, puis appliqués publiquement par `js/main.js`. La création de nouvelles cartes et la modification avancée des styles restent à ajouter dans une étape ultérieure. La bibliothèque CMS JSON reste disponible pour les blocs structurés.
