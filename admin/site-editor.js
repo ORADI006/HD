@@ -50,17 +50,22 @@ async function scanPublicPage() {
   if (!response.ok) throw new Error('Impossible de lire la structure du portfolio (' + response.status + ').');
   const html = await response.text();
   const parsed = new DOMParser().parseFromString(html, 'text/html');
-  const textSelectors = 'h1,h2,h3,h4,p,li,a,span,button,.section-label,.hero-label,.view-link';
+  const textSelectors = 'h1,h2,h3,h4,p,li,a,span,button';
   const fields = [];
   $$(textSelectors, parsed).forEach((element) => {
-    if (element.children.length || element.closest('.hadassa-splash') || element.closest('[aria-hidden="true"]')) return;
-    if (element.matches('.number,.arrow,.dot,.icon,.quote-mark,.avatar,.splash-loading,.splash-caption')) return;
-    const value = textOf(element);
-    if (!value || value.length > 500) return;
-    const selector = selectorFor(element);
-    if (!selector) return;
+    if (element.closest('.hadassa-splash') || element.closest('[aria-hidden="true"]')) return;
+    if (element.closest('.number,.arrow,.dot,.icon,.quote-mark,.avatar,.splash-loading,.splash-caption')) return;
     const root = rootFor(element);
-    fields.push({ selector, value, section: root.label, label: value.slice(0, 90) });
+    Array.from(element.childNodes).forEach((node, nodeIndex) => {
+      if (node.nodeType !== Node.TEXT_NODE) return;
+      const raw = node.textContent || '';
+      const value = raw.replace(/\s+/g, ' ').trim();
+      if (!value || value.length > 500) return;
+      const selector = selectorFor(element);
+      const prefix = (raw.match(/^\s*/) || [''])[0];
+      const suffix = (raw.match(/\s*$/) || [''])[0];
+      fields.push({ selector, nodeIndex, value, prefix, suffix, section: root.label, label: value.slice(0, 90) });
+    });
   });
 
   const images = [];
