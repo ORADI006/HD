@@ -47,5 +47,33 @@ document.querySelectorAll('[data-view],[data-go]').forEach(b=>b.addEventListener
 $('#add-content').onclick=()=>edit(null);$('#content-form').onsubmit=e=>saveContent(e).catch(err);$('#add-admin').onclick=()=>$('#admin-dialog').showModal();$('#admin-form').onsubmit=e=>addAdmin(e).catch(err);
 document.addEventListener('click',e=>{let a=e.target.closest('[data-apply]');if(a)apply(a.dataset.apply,$('[data-choice="'+a.dataset.apply+'"]').value).catch(err);let ed=e.target.closest('[data-edit]');if(ed)edit(S.content.find(x=>x.content_key===ed.dataset.edit));let d=e.target.closest('[data-delete]');if(d)delContent(d.dataset.delete).catch(err);let c=e.target.closest('[data-close]');if(c)$('#'+c.dataset.close).close()});
 document.addEventListener('change',e=>{let u=e.target.closest('[data-upload]');if(u&&u.files[0])upload(u.dataset.upload,u.files[0]).catch(err);let r=e.target.closest('[data-role]');if(r)patchAdmin(r.dataset.role,{role:r.value}).catch(err);let ac=e.target.closest('[data-active]');if(ac)patchAdmin(ac.dataset.active,{is_active:ac.checked}).catch(err);let pc=e.target.closest('[data-pcontent]');if(pc){let a=S.admins.find(x=>x.id===pc.dataset.pcontent);patchAdmin(pc.dataset.pcontent,{permissions:{...a.permissions,'content.manage':pc.checked}}).catch(err)}let pm=e.target.closest('[data-pmedia]');if(pm){let a=S.admins.find(x=>x.id===pm.dataset.pmedia);patchAdmin(pm.dataset.pmedia,{permissions:{...a.permissions,'media.manage':pm.checked}}).catch(err)}});
-sb.auth.onAuthStateChange(async(_e,session)=>{if(session?.user)try{await start(session.user)}catch(e){await sb.auth.signOut();$('#login-msg').textContent=e.message}});
-let {data:{session}}=await sb.auth.getSession();if(session?.user)try{await start(session.user)}catch(e){await sb.auth.signOut();$('#login-msg').textContent=e.message}
+// IMPORTANT: keep this callback synchronous. Supabase JS can deadlock when
+// database/auth calls are awaited inside onAuthStateChange (see Supabase KB).
+let handledUserId=null,pendingUserId=null;
+function processSession(session){
+ if(!session?.user){
+  handledUserId=null;
+  $('#app').hidden=true;
+  $('#login').hidden=false;
+  return;
+ }
+ const user=session.user,id=user.id;
+ if(handledUserId===id||pendingUserId===id)return;
+ pendingUserId=id;
+ // Defer all Supabase queries until after the auth callback has returned.
+ setTimeout(async()=>{
+  try{
+   await start(user);
+   handledUserId=id;
+  }catch(e){
+   console.error('HADASSA admin authentication failed:',e);
+   $('#login-msg').textContent=e.message||'Connexion impossible. Vérifiez les droits du compte.';
+   await sb.auth.signOut();
+  }finally{
+   if(pendingUserId===id)pendingUserId=null;
+  }
+ },0);
+}
+sb.auth.onAuthStateChange((event,session)=>{
+ if(event==='INITIAL_SESSION'||event==='SIGNED_IN')processSession(session);
+});
