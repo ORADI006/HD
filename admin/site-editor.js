@@ -16,7 +16,7 @@ function rootFor(element) {
   if (header) return { element: header, prefix: 'header', label: 'Navigation' };
   const footer = element.closest('footer');
   if (footer) return { element: footer, prefix: 'footer', label: 'Pied de page' };
-  return { element: document.body, prefix: 'body', label: 'Page' };
+  return { element: element.ownerDocument.body, prefix: 'body', label: 'Page' };
 }
 
 function selectorWithin(element, root) {
