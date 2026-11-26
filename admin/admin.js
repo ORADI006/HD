@@ -10,8 +10,15 @@ function can(p){return S.admin?.role==='super_admin'||S.admin?.permissions?.[p]=
 async function log(action,type,id,details={}){await sb.from('hadassa_admin_audit_log').insert({actor_user_id:S.user.id,actor_email:S.user.email,action,entity_type:type,entity_id:String(id||''),details})}
 async function start(user){
  S.user=user;let email=(user.email||'').toLowerCase();
- if(email===ROOT){let r=await sb.from('hadassa_admin_users').upsert({email:ROOT,user_id:user.id,role:'super_admin',permissions:{},is_active:true},{onConflict:'email'});if(r.error)throw r.error}
- else{let invite=await sb.from('hadassa_admin_users').select('id,user_id').eq('email',email).eq('is_active',true).maybeSingle();if(invite.error)throw invite.error;if(!invite.data)throw Error('Cette adresse Google n’a pas été invitée par le Super Admin.');if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Cette invitation est déjà liée à un autre compte Google.');if(!invite.data.user_id){let claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null);if(claim.error)throw claim.error}}
+ const invite=await sb.from('hadassa_admin_users').select('id,user_id,role,is_active').eq('email',email).maybeSingle();
+ if(invite.error)throw invite.error;
+ if(!invite.data||!invite.data.is_active)throw Error('Aucun accès actif n’est associé à cette adresse Google.');
+ if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Ce compte administrateur est déjà lié à un autre identifiant Google.');
+ if(!invite.data.user_id){
+  if(email!==ROOT)throw Error('Cette invitation n’est pas encore activée. Contactez le Super Admin.');
+  const claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null);
+  if(claim.error)throw claim.error;
+ }
  let q=await sb.from('hadassa_admin_users').select('*').eq('user_id',user.id).eq('is_active',true).maybeSingle();if(q.error)throw q.error;if(!q.data)throw Error('Accès administration non autorisé.');
  S.admin=q.data;loadBuilder=initSiteEditor({toast,log,user});$('#login').hidden=true;$('#app').hidden=false;$('#user-email').textContent=user.email;$('#user-role').textContent=q.data.role.toUpperCase();
  if(q.data.role!=='super_admin'){$('#admins-nav').hidden=true;document.querySelectorAll('.super-only').forEach(x=>x.hidden=true)}
@@ -67,13 +74,20 @@ function processSession(session){
    handledUserId=id;
   }catch(e){
    console.error('HADASSA admin authentication failed:',e);
-   $('#login-msg').textContent=e.message||'Connexion impossible. Vérifiez les droits du compte.';
-   await sb.auth.signOut();
+   $('#login').hidden=false;
+   $('#app').hidden=true;
+   $('#login-msg').textContent='Connexion établie, mais chargement du tableau de bord impossible : '+(e.message||'erreur inconnue')+' (ouvre la console F12 pour les détails).';
   }finally{
    if(pendingUserId===id)pendingUserId=null;
   }
  },0);
 }
-sb.auth.onAuthStateChange((event,session)=>{
- if(event==='INITIAL_SESSION'||event==='SIGNED_IN')processSession(session);
+sb.auth.onAuthStateChange((_event,session)=>{
+ // React to every auth event; the handler itself only schedules async work.
+ processSession(session);
 });
+// Explicit initial read prevents a missed INITIAL_SESSION event during page startup.
+sb.auth.getSession().then(({data,error})=>{
+ if(error){$('#login-msg').textContent='Impossible de lire la session : '+error.message;return;}
+ processSession(data.session);
+}).catch(error=>{$('#login-msg').textContent='Erreur de session : '+error.message;});
