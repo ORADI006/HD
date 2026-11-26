@@ -6,6 +6,21 @@
     <title>HADASSA — Designer & MC | Portfolio Créatif</title>
     <meta name="description" content="HADASSA — Designer graphique / Digital Designer & Maître de cérémonie. Je transforme les idées en visuels puissants et les événements en expériences inoubliables.">
     <meta name="theme-color" content="#0a0a0a">
+    <script>
+    // Secours OAuth : si Supabase retombe sur la Site URL (/) au lieu de /admin.html,
+    // transférer immédiatement le code PKCE vers la page qui sait finaliser la session.
+    (function () {
+        const current = new URL(window.location.href);
+        const isHome = current.pathname === '/' || current.pathname === '/index.html';
+        const hasAuthCallback = current.searchParams.has('code') ||
+            current.searchParams.has('error') ||
+            current.searchParams.has('error_description');
+        if (isHome && hasAuthCallback) {
+            current.pathname = '/admin.html';
+            window.location.replace(current.pathname + current.search + current.hash);
+        }
+    })();
+    </script>
     <script src="js/theme.js"></script>
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://hd-orpin-zeta.vercel.app/">
