@@ -1,7 +1,7 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm';
 import {initSiteEditor} from './site-editor.js';
-const URL='https://cxwlfplkimnqlzmdsajj.supabase.co',KEY='sb_publishable_ISAB6iARgJB_F0n9kr4l-A_4NLPH4_n',ROOT='drivelinkxv76@gmail.com';
-const sb=createClient(URL,KEY,{auth:{flowType:'pkce',detectSessionInUrl:false,persistSession:true,autoRefreshToken:true}}),$=s=>document.querySelector(s),S={user:null,admin:null,media:[],slots:[],content:[],admins:[]};
+const SUPABASE_URL='https://cxwlfplkimnqlzmdsajj.supabase.co',KEY='sb_publishable_ISAB6iARgJB_F0n9kr4l-A_4NLPH4_n',ROOT='drivelinkxv76@gmail.com';
+const sb=createClient(SUPABASE_URL,KEY,{auth:{flowType:'pkce',detectSessionInUrl:false,persistSession:true,autoRefreshToken:true}}),$=s=>document.querySelector(s),S={user:null,admin:null,media:[],slots:[],content:[],admins:[]};
 let loadBuilder=null;
 const labels={projet_accueil:'Photo principale',experience_digital:'Vidéo Digital Experience',mc_mariage:'Vidéo MC Mariage'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -48,7 +48,23 @@ async function loadAdmins(){if(S.admin.role!=='super_admin')return;let r=await s
 async function patchAdmin(id,patch){let a=S.admins.find(x=>x.id===id);if(!a||a.role==='super_admin')return;let r=await sb.from('hadassa_admin_users').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;await log('update_admin','hadassa_admin_users',id,patch);await loadAdmins()}
 async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Accès créé. L’invité peut se connecter avec Google.');await loadAdmins();await overview()}
 function err(e){console.error(e);toast(e.message||'Erreur inattendue.')}
-$('#google').onclick=async()=>{const btn=$('#google');btn.disabled=true;$('#login-msg').textContent='Redirection vers Google…';const redirectTo=new URL('/admin.html',window.location.origin).toString();const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo,queryParams:{prompt:'select_account'}}});if(r.error){$('#login-msg').textContent='Connexion Google impossible : '+r.error.message;btn.disabled=false;}};
+$('#google').onclick=async()=>{
+ const btn=$('#google');
+ btn.disabled=true;
+ $('#login-msg').textContent='Redirection vers Google…';
+ try{
+  const redirectTo=window.location.origin+'/admin.html';
+  const {error}=await sb.auth.signInWithOAuth({
+   provider:'google',
+   options:{redirectTo,queryParams:{prompt:'select_account'}}
+  });
+  if(error)throw error;
+ }catch(error){
+  console.error('HADASSA Google sign-in failed:',error);
+  $('#login-msg').textContent='Connexion Google impossible : '+(error.message||'erreur inconnue');
+  btn.disabled=false;
+ }
+};
 $('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 document.querySelectorAll('[data-view],[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view||b.dataset.go)));
 $('#add-content').onclick=()=>edit(null);$('#content-form').onsubmit=e=>saveContent(e).catch(err);$('#add-admin').onclick=()=>$('#admin-dialog').showModal();$('#admin-form').onsubmit=e=>addAdmin(e).catch(err);
