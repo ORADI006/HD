@@ -47,7 +47,7 @@ async function saveContent(e){e.preventDefault();let content;try{content=JSON.pa
 async function delContent(k){if(!confirm('Supprimer '+k+' ?'))return;let r=await sb.from('hadassa_site_content').delete().eq('content_key',k);if(r.error)throw r.error;await log('delete_content','hadassa_site_content',k);await loadContent();await overview()}
 async function loadAdmins(){if(S.admin.role!=='super_admin')return;let r=await sb.from('hadassa_admin_users').select('*').order('created_at');if(r.error)throw r.error;S.admins=r.data||[];$('#admin-list').innerHTML=S.admins.map(a=>'<article><h4>'+esc(a.email)+'</h4><p>'+(a.user_id?'Compte activé':'Invitation en attente')+' · '+(a.is_active?'Actif':'Désactivé')+'</p><select data-role="'+a.id+'" '+(a.role==='super_admin'?'disabled':'')+'><option value="admin" '+(a.role==='admin'?'selected':'')+'>Administrateur</option><option value="editor" '+(a.role==='editor'?'selected':'')+'>Éditeur</option></select><label><input type="checkbox" data-active="'+a.id+'" '+(a.is_active?'checked':'')+' '+(a.role==='super_admin'?'disabled':'')+'> Actif</label><label><input type="checkbox" data-pcontent="'+a.id+'" '+(a.permissions?.['content.manage']?'checked':'')+'> Contenus</label><label><input type="checkbox" data-pmedia="'+a.id+'" '+(a.permissions?.['media.manage']?'checked':'')+'> Médias</label></article>').join('');$('#s-admin').textContent=S.admins.length}
 async function patchAdmin(id,patch){let a=S.admins.find(x=>x.id===id);if(!a||a.role==='super_admin')return;let r=await sb.from('hadassa_admin_users').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;await log('update_admin','hadassa_admin_users',id,patch);await loadAdmins()}
-async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();const issued=await sb.functions.invoke('hadassa-admin-code',{body:{action:'issue',email}});
+async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});const issued=await sb.functions.invoke('hadassa-admin-code',{body:{action:'issue',email}});
 if(issued.error)throw issued.error;
 if(!issued.data?.code)throw Error('Invitation créée, mais le code n’a pas pu être généré.');
 $('#admin-dialog').close();$('#admin-form').reset();
@@ -145,12 +145,12 @@ sb.auth.onAuthStateChange((_event,session)=>{
 // getSession() attend la fin de cette initialisation et récupère la session restaurée.
 async function restoreAuthSession(){
  const {data,error}=await sb.auth.getSession();
- if(error)throw new Error('Google a confirmé la connexion, mais Supabase n’a pas pu restaurer la session : '+error.message);
+ if(error)throw new Error('Impossible de restaurer la session : '+error.message);
  processSession(data.session);
 }
 restoreAuthSession().catch(error=>{
- console.error('HADASSA OAuth callback failed:',error);
+ console.error('HADASSA session restore failed:',error);
  $('#login').hidden=false;$('#app').hidden=true;
- $('#login-msg').textContent=error.message||'Impossible de restaurer la session Google.';
- $('#google').disabled=false;
+ $('#login-msg').textContent=error.message||'Impossible de restaurer la session.';
+ 
 });
