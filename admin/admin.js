@@ -47,69 +47,52 @@ async function saveContent(e){e.preventDefault();let content;try{content=JSON.pa
 async function delContent(k){if(!confirm('Supprimer '+k+' ?'))return;let r=await sb.from('hadassa_site_content').delete().eq('content_key',k);if(r.error)throw r.error;await log('delete_content','hadassa_site_content',k);await loadContent();await overview()}
 async function loadAdmins(){if(S.admin.role!=='super_admin')return;let r=await sb.from('hadassa_admin_users').select('*').order('created_at');if(r.error)throw r.error;S.admins=r.data||[];$('#admin-list').innerHTML=S.admins.map(a=>'<article><h4>'+esc(a.email)+'</h4><p>'+(a.user_id?'Compte activé':'Invitation en attente')+' · '+(a.is_active?'Actif':'Désactivé')+'</p><select data-role="'+a.id+'" '+(a.role==='super_admin'?'disabled':'')+'><option value="admin" '+(a.role==='admin'?'selected':'')+'>Administrateur</option><option value="editor" '+(a.role==='editor'?'selected':'')+'>Éditeur</option></select><label><input type="checkbox" data-active="'+a.id+'" '+(a.is_active?'checked':'')+' '+(a.role==='super_admin'?'disabled':'')+'> Actif</label><label><input type="checkbox" data-pcontent="'+a.id+'" '+(a.permissions?.['content.manage']?'checked':'')+'> Contenus</label><label><input type="checkbox" data-pmedia="'+a.id+'" '+(a.permissions?.['media.manage']?'checked':'')+'> Médias</label></article>').join('');$('#s-admin').textContent=S.admins.length}
 async function patchAdmin(id,patch){let a=S.admins.find(x=>x.id===id);if(!a||a.role==='super_admin')return;let r=await sb.from('hadassa_admin_users').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;await log('update_admin','hadassa_admin_users',id,patch);await loadAdmins()}
-async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Invitation créée. La personne pourra demander un code de vérification par e-mail.');await loadAdmins();await overview()}
+async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();const issued=await sb.functions.invoke('hadassa-admin-code',{body:{action:'issue',email}});
+if(issued.error)throw issued.error;
+if(!issued.data?.code)throw Error('Invitation créée, mais le code n’a pas pu être généré.');
+$('#admin-dialog').close();$('#admin-form').reset();
+window.prompt('Code de connexion à transmettre à '+email+' (valable 15 minutes, utilisable une seule fois) :',issued.data.code);
+toast('Invitation et code générés. Transmettez le code à l’administrateur.');
+await loadAdmins();await overview()}
 function err(e){console.error(e);toast(e.message||'Erreur inattendue.')}
-$('#google').onclick=async()=>{
- const btn=$('#google');
- btn.disabled=true;
- $('#login-msg').textContent='Redirection vers Google…';
- try{
-  const redirectTo=window.location.origin+'/admin.html';
-  const {error}=await sb.auth.signInWithOAuth({
-   provider:'google',
-   options:{redirectTo,queryParams:{prompt:'select_account'}}
-  });
-  if(error)throw error;
- }catch(error){
-  console.error('HADASSA Google sign-in failed:',error);
-  $('#login-msg').textContent='Connexion Google impossible : '+(error.message||'erreur inconnue');
-  btn.disabled=false;
- }
-};
-
-
-let pendingCodeEmail='';
-const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),sendCode=$('#send-code'),rootReset=$('#root-reset');
+const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),adminCodeWrap=$('#admin-code-wrap'),rootReset=$('#root-reset');
 function updateLoginMode(){
  const isRoot=emailInput.value.trim().toLowerCase()===ROOT;
- rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;rootReset.hidden=!isRoot;sendCode.hidden=isRoot;
+ rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;rootReset.hidden=!isRoot;adminCodeWrap.hidden=isRoot;
 }
 emailInput.addEventListener('input',updateLoginMode);
 updateLoginMode();
 $('#email-form').onsubmit=async e=>{
- e.preventDefault();const btn=rootLogin;btn.disabled=true;$('#login-msg').textContent='Connexion Super Admin…';
+ e.preventDefault();
+ const email=emailInput.value.trim().toLowerCase();
+ const btn=email===ROOT?rootLogin:$('#admin-code-login');
+ btn.disabled=true;
+ $('#login-msg').textContent=email===ROOT?'Connexion Super Admin…':'Vérification de votre code…';
  try{
-  const email=emailInput.value.trim().toLowerCase();
-  if(email!==ROOT){await requestEmailCode();return;}
-  const {error}=await sb.auth.signInWithPassword({email,password:$('#root-password').value});
-  if(error)throw error;
- }catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez vos identifiants.');}
+  if(email===ROOT){
+   const {error}=await sb.auth.signInWithPassword({email,password:$('#root-password').value});
+   if(error)throw error;
+  }else{
+   const code=$('#admin-access-code').value.trim();
+   if(!/^\\d{6}$/.test(code))throw Error('Saisissez le code à 6 chiffres remis par le Super Admin.');
+   const {data,error}=await sb.functions.invoke('hadassa-admin-code',{body:{action:'redeem',email,code}});
+   if(error)throw error;
+   if(!data?.token_hash)throw Error('Code invalide, expiré ou déjà utilisé.');
+   const verified=await sb.auth.verifyOtp({token_hash:data.token_hash,type:'magiclink'});
+   if(verified.error)throw verified.error;
+  }
+ }catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez vos informations.');}
  finally{btn.disabled=false;}
 };
-async function requestEmailCode(){
+rootReset.onclick=async()=>{
  const email=emailInput.value.trim().toLowerCase();
- if(!email)throw Error('Saisissez votre adresse e-mail.');
- if(email===ROOT)throw Error('Le Super Admin se connecte avec son mot de passe ou Google.');
- $('#send-code').disabled=true;$('#login-msg').textContent='Envoi du code de vérification…';
+ rootReset.disabled=true;$('#login-msg').textContent='Envoi du lien de création/réinitialisation…';
  try{
-  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/admin.html'});
   if(error)throw error;
-  pendingCodeEmail=email;$('#email-form').hidden=true;$('#verify-form').hidden=false;
-  $('#login-msg').textContent='Code envoyé. Vérifiez votre boîte de réception et vos courriers indésirables.';
- }catch(error){$('#login-msg').textContent='Envoi impossible : '+(error.message||'erreur inconnue');}
- finally{$('#send-code').disabled=false;}
-}
-sendCode.onclick=()=>requestEmailCode();
-rootReset.onclick=async()=>{const email=emailInput.value.trim().toLowerCase();rootReset.disabled=true;$('#login-msg').textContent='Envoi du lien de création/réinitialisation…';try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/admin.html'});if(error)throw error;$('#login-msg').textContent='Un lien sécurisé a été envoyé à '+email+'. Ouvrez-le pour définir votre mot de passe Super Admin.';}catch(error){$('#login-msg').textContent='Impossible d’envoyer le lien : '+(error.message||'erreur inconnue');}finally{rootReset.disabled=false;}};
-$('#resend-code').onclick=()=>requestEmailCode();
-$('#verify-form').onsubmit=async e=>{
- e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Vérification du code…';
- try{
-  const {error}=await sb.auth.verifyOtp({email:pendingCodeEmail,token:$('#verify-code').value.trim(),type:'email'});
-  if(error)throw error;
-  $('#login-msg').textContent='Adresse vérifiée. Vérification de vos autorisations…';
- }catch(error){$('#login-msg').textContent='Code invalide ou expiré : '+(error.message||'demandez un nouveau code.');}
- finally{btn.disabled=false;}
+  $('#login-msg').textContent='Un lien sécurisé a été envoyé à '+email+'. Ouvrez-le pour définir votre mot de passe Super Admin.';
+ }catch(error){$('#login-msg').textContent='Impossible d’envoyer le lien : '+(error.message||'erreur inconnue');}
+ finally{rootReset.disabled=false;}
 };
 $('#set-password').onclick=async()=>{
  const password=window.prompt('Nouveau mot de passe Super Admin (8 caractères minimum) :');
