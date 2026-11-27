@@ -80,7 +80,7 @@ $('#email-form').onsubmit=async e=>{
  e.preventDefault();const btn=rootLogin;btn.disabled=true;$('#login-msg').textContent='Connexion Super Admin…';
  try{
   const email=emailInput.value.trim().toLowerCase();
-  if(email!==ROOT)throw Error('La connexion par mot de passe est réservée au Super Admin. Les autres administrateurs utilisent un code e-mail.');
+  if(email!==ROOT){await requestEmailCode();return;}
   const {error}=await sb.auth.signInWithPassword({email,password:$('#root-password').value});
   if(error)throw error;
  }catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez vos identifiants.');}
