@@ -17,12 +17,13 @@ async function start(user){
  if(!invite.data.user_id){
   const claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null).select('id').maybeSingle();
   if(claim.error)throw claim.error;
-  if(!claim.data)throw Error('Cette invitation n’a pas pu être activée. Vérifiez que cette adresse a bien été invitée par le Super Admin.');
+  if(!claim.data)throw Error('Cette invitation n’a pas pu être activée. Vérifiez que cette adresse a bien été ajoutée par le Super Admin.');
  }
  let q=await sb.from('hadassa_admin_users').select('*').eq('user_id',user.id).eq('is_active',true).maybeSingle();if(q.error)throw q.error;if(!q.data)throw Error('Accès administration non autorisé.');
  S.admin=q.data;loadBuilder=initSiteEditor({toast,log,user});$('#login').hidden=true;$('#app').hidden=false;$('#user-email').textContent=user.email;$('#user-role').textContent=q.data.role.toUpperCase();
  if(q.data.role!=='super_admin'){$('#admins-nav').hidden=true;document.querySelectorAll('.super-only').forEach(x=>x.hidden=true)}
  if(!can('media.manage'))document.querySelector('[data-view=media]').hidden=true;
+ $('#set-password').hidden=email!==ROOT;
  if(!can('content.manage')){document.querySelector('[data-view=content]').hidden=true;document.querySelector('[data-view=builder]').hidden=true;}
  await overview();
 }
@@ -46,7 +47,7 @@ async function saveContent(e){e.preventDefault();let content;try{content=JSON.pa
 async function delContent(k){if(!confirm('Supprimer '+k+' ?'))return;let r=await sb.from('hadassa_site_content').delete().eq('content_key',k);if(r.error)throw r.error;await log('delete_content','hadassa_site_content',k);await loadContent();await overview()}
 async function loadAdmins(){if(S.admin.role!=='super_admin')return;let r=await sb.from('hadassa_admin_users').select('*').order('created_at');if(r.error)throw r.error;S.admins=r.data||[];$('#admin-list').innerHTML=S.admins.map(a=>'<article><h4>'+esc(a.email)+'</h4><p>'+(a.user_id?'Compte activé':'Invitation en attente')+' · '+(a.is_active?'Actif':'Désactivé')+'</p><select data-role="'+a.id+'" '+(a.role==='super_admin'?'disabled':'')+'><option value="admin" '+(a.role==='admin'?'selected':'')+'>Administrateur</option><option value="editor" '+(a.role==='editor'?'selected':'')+'>Éditeur</option></select><label><input type="checkbox" data-active="'+a.id+'" '+(a.is_active?'checked':'')+' '+(a.role==='super_admin'?'disabled':'')+'> Actif</label><label><input type="checkbox" data-pcontent="'+a.id+'" '+(a.permissions?.['content.manage']?'checked':'')+'> Contenus</label><label><input type="checkbox" data-pmedia="'+a.id+'" '+(a.permissions?.['media.manage']?'checked':'')+'> Médias</label></article>').join('');$('#s-admin').textContent=S.admins.length}
 async function patchAdmin(id,patch){let a=S.admins.find(x=>x.id===id);if(!a||a.role==='super_admin')return;let r=await sb.from('hadassa_admin_users').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;await log('update_admin','hadassa_admin_users',id,patch);await loadAdmins()}
-async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Accès créé. L’invité peut se connecter avec Google.');await loadAdmins();await overview()}
+async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Invitation créée. La personne pourra demander un code de vérification par e-mail.');await loadAdmins();await overview()}
 function err(e){console.error(e);toast(e.message||'Erreur inattendue.')}
 $('#google').onclick=async()=>{
  const btn=$('#google');
@@ -66,41 +67,59 @@ $('#google').onclick=async()=>{
  }
 };
 
-let pendingSignupEmail='';
-function showAuthMode(mode){
- $('#signin-form').hidden=mode!=='signin';$('#signup-form').hidden=mode!=='signup';$('#verify-form').hidden=mode!=='verify';
- $('#show-signup').hidden=mode!=='signin';$('#show-signin').hidden=mode==='signin';$('#login-msg').textContent='';
+
+let pendingCodeEmail='';
+const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),sendCode=$('#send-code');
+function updateLoginMode(){
+ const isRoot=emailInput.value.trim().toLowerCase()===ROOT;
+ rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;sendCode.hidden=isRoot;
 }
-$('#show-signup').onclick=()=>showAuthMode('signup');$('#show-signin').onclick=()=>showAuthMode('signin');
-$('#signin-form').onsubmit=async e=>{
- e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Connexion en cours…';
- try{const {error}=await sb.auth.signInWithPassword({email:$('#signin-email').value.trim().toLowerCase(),password:$('#signin-password').value});if(error)throw error;}
- catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez vos identifiants.');}
- finally{btn.disabled=false;}
-};
-$('#signup-form').onsubmit=async e=>{
- e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Création du compte…';
- const email=$('#signup-email').value.trim().toLowerCase(),name=$('#signup-name').value.trim(),password=$('#signup-password').value;
+emailInput.addEventListener('input',updateLoginMode);
+updateLoginMode();
+$('#email-form').onsubmit=async e=>{
+ e.preventDefault();const btn=rootLogin;btn.disabled=true;$('#login-msg').textContent='Connexion Super Admin…';
  try{
-  if(password.length<8)throw Error('Le mot de passe doit contenir au moins 8 caractères.');
-  const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name},emailRedirectTo:window.location.origin+'/admin.html'}});
+  const email=emailInput.value.trim().toLowerCase();
+  if(email!==ROOT)throw Error('La connexion par mot de passe est réservée au Super Admin. Les autres administrateurs utilisent un code e-mail.');
+  const {error}=await sb.auth.signInWithPassword({email,password:$('#root-password').value});
   if(error)throw error;
-  if(data.session)throw Error('La confirmation par e-mail semble désactivée dans Supabase. Activez « Confirm email » pour imposer la vérification par code avant la connexion.');
-  pendingSignupEmail=email;showAuthMode('verify');$('#login-msg').textContent='Compte créé. Consultez votre boîte e-mail et saisissez le code reçu.';
- }catch(error){$('#login-msg').textContent='Création impossible : '+(error.message||'erreur inconnue');}
+ }catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez vos identifiants.');}
  finally{btn.disabled=false;}
 };
+async function requestEmailCode(){
+ const email=emailInput.value.trim().toLowerCase();
+ if(!email)throw Error('Saisissez votre adresse e-mail.');
+ if(email===ROOT)throw Error('Le Super Admin se connecte avec son mot de passe ou Google.');
+ $('#send-code').disabled=true;$('#login-msg').textContent='Envoi du code de vérification…';
+ try{
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  if(error)throw error;
+  pendingCodeEmail=email;$('#email-form').hidden=true;$('#verify-form').hidden=false;
+  $('#login-msg').textContent='Code envoyé. Vérifiez votre boîte de réception et vos courriers indésirables.';
+ }catch(error){$('#login-msg').textContent='Envoi impossible : '+(error.message||'erreur inconnue');}
+ finally{$('#send-code').disabled=false;}
+}
+sendCode.onclick=()=>requestEmailCode();
+$('#resend-code').onclick=()=>requestEmailCode();
 $('#verify-form').onsubmit=async e=>{
  e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Vérification du code…';
  try{
-  const {data,error}=await sb.auth.verifyOtp({email:pendingSignupEmail,token:$('#verify-code').value.trim(),type:'signup'});
+  const {error}=await sb.auth.verifyOtp({email:pendingCodeEmail,token:$('#verify-code').value.trim(),type:'email'});
   if(error)throw error;
-  if(!data.session)throw Error('Adresse vérifiée, mais aucune session n’a été créée. Connectez-vous avec votre mot de passe.');
-  $('#login-msg').textContent='Adresse confirmée. Vérification de vos autorisations…';
+  $('#login-msg').textContent='Adresse vérifiée. Vérification de vos autorisations…';
  }catch(error){$('#login-msg').textContent='Code invalide ou expiré : '+(error.message||'demandez un nouveau code.');}
  finally{btn.disabled=false;}
 };
-
+$('#set-password').onclick=async()=>{
+ const password=window.prompt('Nouveau mot de passe Super Admin (8 caractères minimum) :');
+ if(password===null)return;
+ if(password.length<8){toast('Le mot de passe doit contenir au moins 8 caractères.');return;}
+ const confirmPassword=window.prompt('Confirmez le nouveau mot de passe :');
+ if(password!==confirmPassword){toast('Les deux mots de passe ne correspondent pas.');return;}
+ const {error}=await sb.auth.updateUser({password});
+ if(error)toast('Impossible de modifier le mot de passe : '+error.message);
+ else toast('Mot de passe Super Admin enregistré. Vous pourrez ensuite vous connecter avec votre e-mail et ce mot de passe.');
+};
 $('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 document.querySelectorAll('[data-view],[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view||b.dataset.go)));
 $('#add-content').onclick=()=>edit(null);$('#content-form').onsubmit=e=>saveContent(e).catch(err);$('#add-admin').onclick=()=>$('#admin-dialog').showModal();$('#admin-form').onsubmit=e=>addAdmin(e).catch(err);
