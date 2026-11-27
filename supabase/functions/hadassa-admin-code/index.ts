@@ -41,12 +41,6 @@ Deno.serve(async (req: Request) => {
     }
     if (email === "drivelinkxv76@gmail.com") return json({ error: "Le Super Admin utilise son mot de passe." }, 403);
 
-    const { data: invite, error: inviteError } = await admin
-      .from("hadassa_admin_users").select("id,email,is_active")
-      .eq("email", email).eq("is_active", true).maybeSingle();
-    if (inviteError) throw inviteError;
-    if (!invite) return json({ error: "Cette adresse n’a pas été invitée ou son accès est désactivé." }, 403);
-
     if (action === "issue") {
       const authorization = req.headers.get("Authorization") || "";
       const token = authorization.replace(/^Bearer\s+/i, "");
@@ -62,6 +56,11 @@ Deno.serve(async (req: Request) => {
         .eq("is_active", true).maybeSingle();
       if (rootError) throw rootError;
       if (!root) return json({ error: "Seul le Super Admin peut générer un code." }, 403);
+      const { data: invite, error: inviteError } = await admin
+        .from("hadassa_admin_users").select("id,email,is_active")
+        .eq("email", email).eq("is_active", true).maybeSingle();
+      if (inviteError) throw inviteError;
+      if (!invite) return json({ error: "Cette adresse n’a pas été invitée ou son accès est désactivé." }, 403);
 
       const { data: users, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       if (usersError) throw usersError;
@@ -81,6 +80,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "redeem") {
+      const { data: invite, error: inviteError } = await admin
+        .from("hadassa_admin_users").select("id,email,is_active")
+        .eq("email", email).eq("is_active", true).maybeSingle();
+      if (inviteError) throw inviteError;
+      if (!invite) return json({ error: "Cette adresse n’a pas été invitée ou son accès est désactivé." }, 403);
       const code = String(body?.code || "").trim();
       if (!/^\d{6}$/.test(code)) return json({ error: "Le code doit contenir 6 chiffres." }, 400);
       const codeHash = await digest(email, code);
