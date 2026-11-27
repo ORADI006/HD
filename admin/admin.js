@@ -69,10 +69,10 @@ $('#google').onclick=async()=>{
 
 
 let pendingCodeEmail='';
-const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),sendCode=$('#send-code');
+const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),sendCode=$('#send-code'),rootReset=$('#root-reset');
 function updateLoginMode(){
  const isRoot=emailInput.value.trim().toLowerCase()===ROOT;
- rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;sendCode.hidden=isRoot;
+ rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;rootReset.hidden=!isRoot;sendCode.hidden=isRoot;
 }
 emailInput.addEventListener('input',updateLoginMode);
 updateLoginMode();
@@ -100,6 +100,7 @@ async function requestEmailCode(){
  finally{$('#send-code').disabled=false;}
 }
 sendCode.onclick=()=>requestEmailCode();
+rootReset.onclick=async()=>{const email=emailInput.value.trim().toLowerCase();rootReset.disabled=true;$('#login-msg').textContent='Envoi du lien de création/réinitialisation…';try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/admin.html'});if(error)throw error;$('#login-msg').textContent='Un lien sécurisé a été envoyé à '+email+'. Ouvrez-le pour définir votre mot de passe Super Admin.';}catch(error){$('#login-msg').textContent='Impossible d’envoyer le lien : '+(error.message||'erreur inconnue');}finally{rootReset.disabled=false;}};
 $('#resend-code').onclick=()=>requestEmailCode();
 $('#verify-form').onsubmit=async e=>{
  e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Vérification du code…';
