@@ -503,3 +503,74 @@
                 console.warn('Les médias HADASSA restent sur les fichiers locaux :', error);
             }
         })();
+
+
+// ===== CMS VISUEL HADASSA : textes, liens, images et disposition =====
+(async function loadHadassaSiteBuilder() {
+    const SUPABASE_URL = 'https://cxwlfplkimnqlzmdsajj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_ISAB6iARgJB_F0n9kr4l-A_4NLPH4_n';
+    try {
+        const response = await fetch(
+            SUPABASE_URL + '/rest/v1/hadassa_site_content?content_key=eq.site.builder.v1&select=content',
+            { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }, cache: 'no-store' }
+        );
+        if (!response.ok) throw new Error('CMS indisponible : ' + response.status);
+        const rows = await response.json();
+        const config = rows[0] && rows[0].content;
+        if (!config) return;
+
+        (config.fields || []).forEach((field) => {
+            if (!field.selector) return;
+            const element = document.querySelector(field.selector);
+            if (!element) return;
+            const value = field.value == null ? '' : String(field.value);
+            const node = Number.isInteger(field.nodeIndex) ? element.childNodes[field.nodeIndex] : null;
+            if (node && node.nodeType === Node.TEXT_NODE) {
+                node.textContent = (field.prefix || '') + value + (field.suffix || '');
+            } else if (!Number.isInteger(field.nodeIndex)) {
+                element.textContent = value;
+            }
+        });
+
+        (config.images || []).forEach((image) => {
+            if (!image.selector) return;
+            const element = document.querySelector(image.selector);
+            if (!element) return;
+            if (image.src) element.setAttribute('src', image.src);
+            if (image.alt != null) element.setAttribute('alt', image.alt);
+        });
+
+        (config.links || []).forEach((link) => {
+            if (!link.selector || !link.href) return;
+            const element = document.querySelector(link.selector);
+            if (element) element.setAttribute('href', link.href);
+        });
+
+        (config.sections || []).forEach((section) => {
+            const element = document.getElementById(section.id);
+            if (element) { element.hidden = section.visible === false; element.style.display = section.visible === false ? 'none' : ''; }
+        });
+
+        const mainElement = document.querySelector('main');
+        if (mainElement && Array.isArray(config.sections)) {
+            const sectionElements = config.sections.map((section) => document.getElementById(section.id)).filter(Boolean);
+            sectionElements.forEach((element) => mainElement.appendChild(element));
+        }
+
+        (config.grids || []).forEach((grid) => {
+            const container = document.querySelector(grid.selector);
+            if (!container || !Array.isArray(grid.order)) return;
+            const pairs = grid.order.map((selector) => ({ selector, element: document.querySelector(selector) }))
+                .filter((item) => item.element && item.element.parentElement === container);
+            pairs.forEach((item) => container.appendChild(item.element));
+            const hiddenItems = new Set(grid.hidden || []);
+            pairs.forEach((item) => {
+                const hidden = hiddenItems.has(item.selector);
+                item.element.hidden = hidden;
+                item.element.style.display = hidden ? 'none' : '';
+            });
+        });
+    } catch (error) {
+        console.warn('Les contenus HADASSA restent sur leur version HTML :', error);
+    }
+})();
