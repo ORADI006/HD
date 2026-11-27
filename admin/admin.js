@@ -12,7 +12,7 @@ async function start(user){
  S.user=user;let email=(user.email||'').toLowerCase();
  const invite=await sb.from('hadassa_admin_users').select('id,user_id,role,is_active').eq('email',email).maybeSingle();
  if(invite.error)throw invite.error;
- if(!invite.data||!invite.data.is_active)throw Error('Aucun accès actif n’est associé à cette adresse Google.');
+ if(!invite.data||!invite.data.is_active)throw Error('Aucun accès administrateur actif n’est associé à cette adresse e-mail.');
  if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Ce compte administrateur est déjà lié à un autre identifiant Google.');
  if(!invite.data.user_id){
   const claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null).select('id').maybeSingle();
