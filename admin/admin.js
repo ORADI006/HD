@@ -15,9 +15,9 @@ async function start(user){
  if(!invite.data||!invite.data.is_active)throw Error('Aucun accès actif n’est associé à cette adresse Google.');
  if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Ce compte administrateur est déjà lié à un autre identifiant Google.');
  if(!invite.data.user_id){
-  if(email!==ROOT)throw Error('Cette invitation n’est pas encore activée. Contactez le Super Admin.');
-  const claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null);
+  const claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null).select('id').maybeSingle();
   if(claim.error)throw claim.error;
+  if(!claim.data)throw Error('Cette invitation n’a pas pu être activée. Vérifiez que cette adresse a bien été invitée par le Super Admin.');
  }
  let q=await sb.from('hadassa_admin_users').select('*').eq('user_id',user.id).eq('is_active',true).maybeSingle();if(q.error)throw q.error;if(!q.data)throw Error('Accès administration non autorisé.');
  S.admin=q.data;loadBuilder=initSiteEditor({toast,log,user});$('#login').hidden=true;$('#app').hidden=false;$('#user-email').textContent=user.email;$('#user-role').textContent=q.data.role.toUpperCase();
@@ -65,6 +65,42 @@ $('#google').onclick=async()=>{
   btn.disabled=false;
  }
 };
+
+let pendingSignupEmail='';
+function showAuthMode(mode){
+ $('#signin-form').hidden=mode!=='signin';$('#signup-form').hidden=mode!=='signup';$('#verify-form').hidden=mode!=='verify';
+ $('#show-signup').hidden=mode!=='signin';$('#show-signin').hidden=mode==='signin';$('#login-msg').textContent='';
+}
+$('#show-signup').onclick=()=>showAuthMode('signup');$('#show-signin').onclick=()=>showAuthMode('signin');
+$('#signin-form').onsubmit=async e=>{
+ e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Connexion en cours…';
+ try{const {error}=await sb.auth.signInWithPassword({email:$('#signin-email').value.trim().toLowerCase(),password:$('#signin-password').value});if(error)throw error;}
+ catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez vos identifiants.');}
+ finally{btn.disabled=false;}
+};
+$('#signup-form').onsubmit=async e=>{
+ e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Création du compte…';
+ const email=$('#signup-email').value.trim().toLowerCase(),name=$('#signup-name').value.trim(),password=$('#signup-password').value;
+ try{
+  if(password.length<8)throw Error('Le mot de passe doit contenir au moins 8 caractères.');
+  const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name},emailRedirectTo:window.location.origin+'/admin.html'}});
+  if(error)throw error;
+  if(data.session)throw Error('La confirmation par e-mail semble désactivée dans Supabase. Activez « Confirm email » pour imposer la vérification par code avant la connexion.');
+  pendingSignupEmail=email;showAuthMode('verify');$('#login-msg').textContent='Compte créé. Consultez votre boîte e-mail et saisissez le code reçu.';
+ }catch(error){$('#login-msg').textContent='Création impossible : '+(error.message||'erreur inconnue');}
+ finally{btn.disabled=false;}
+};
+$('#verify-form').onsubmit=async e=>{
+ e.preventDefault();const btn=e.submitter;btn.disabled=true;$('#login-msg').textContent='Vérification du code…';
+ try{
+  const {data,error}=await sb.auth.verifyOtp({email:pendingSignupEmail,token:$('#verify-code').value.trim(),type:'signup'});
+  if(error)throw error;
+  if(!data.session)throw Error('Adresse vérifiée, mais aucune session n’a été créée. Connectez-vous avec votre mot de passe.');
+  $('#login-msg').textContent='Adresse confirmée. Vérification de vos autorisations…';
+ }catch(error){$('#login-msg').textContent='Code invalide ou expiré : '+(error.message||'demandez un nouveau code.');}
+ finally{btn.disabled=false;}
+};
+
 $('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 document.querySelectorAll('[data-view],[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view||b.dataset.go)));
 $('#add-content').onclick=()=>edit(null);$('#content-form').onsubmit=e=>saveContent(e).catch(err);$('#add-admin').onclick=()=>$('#admin-dialog').showModal();$('#admin-form').onsubmit=e=>addAdmin(e).catch(err);
