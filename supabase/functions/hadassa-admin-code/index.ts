@@ -34,10 +34,14 @@ Deno.serve(async(req:Request)=>{
    if(rootError)throw rootError;if(!rootRecord?.user_id)return json({error:"Le compte Super Admin n’est pas correctement initialisé."},409);
    const {data:used,error:usedError}=await admin.from("hadassa_admin_audit_log").select("id").eq("action","initialize_root_password").limit(1).maybeSingle();
    if(usedError)throw usedError;if(used)return json({error:"La clé de première activation a déjà été utilisée. Elle doit être renouvelée par le gestionnaire du projet."},409);
-   const {error:auditError}=await admin.from("hadassa_admin_audit_log").insert({actor_user_id:rootRecord.user_id,actor_email:ROOT,action:"initialize_root_password",entity_type:"auth_user",entity_id:rootRecord.user_id,details:{method:"protected_initial_activation"}});
+   const {data:auditRecord,error:auditError}=await admin.from("hadassa_admin_audit_log").insert({actor_user_id:rootRecord.user_id,actor_email:ROOT,action:"initialize_root_password",entity_type:"auth_user",entity_id:rootRecord.user_id,details:{method:"protected_initial_activation"}}).select("id").single();
    if(auditError)throw auditError;
    const {data:updated,error:updateError}=await admin.auth.admin.updateUserById(rootRecord.user_id,{password,email_confirm:true});
-   if(updateError)throw updateError;
+   if(updateError){
+    const {error:rollbackError}=await admin.from("hadassa_admin_audit_log").delete().eq("id",auditRecord.id);
+    if(rollbackError)console.error("Could not release root activation record:",rollbackError);
+    throw updateError;
+   }
    return json({updated:Boolean(updated.user)});
   }
   return json({error:"Action non autorisée."},400);
