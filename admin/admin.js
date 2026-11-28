@@ -63,6 +63,15 @@ $('#email-form').onsubmit=async e=>{
  catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre mot de passe.');}
  finally{rootLogin.disabled=false;}
 };
+$('#admin-login').onclick=async()=>{
+ const email=emailInput.value.trim().toLowerCase(),password=$('#admin-password').value,button=$('#admin-login');
+ if(!email||email===ROOT){$('#login-msg').textContent='Saisissez votre adresse e-mail administrateur.';return;}
+ if(!password){$('#login-msg').textContent='Saisissez votre mot de passe.';return;}
+ button.disabled=true;$('#login-msg').textContent='Connexion administrateur…';
+ try{const {error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;}
+ catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre e-mail et votre mot de passe.');}
+ finally{button.disabled=false;}
+};
 $('#create-admin-account').onclick=async()=>{
  const email=emailInput.value.trim().toLowerCase(),password=$('#admin-password').value,confirmPassword=$('#admin-password-confirm').value,button=$('#create-admin-account');
  if(!email||email===ROOT){$('#login-msg').textContent='Saisissez l’adresse e-mail qui a été invitée par le Super Admin.';return;}
