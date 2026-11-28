@@ -49,17 +49,15 @@ async function loadAdmins(){if(S.admin.role!=='super_admin')return;let r=await s
 async function patchAdmin(id,patch){let a=S.admins.find(x=>x.id===id);if(!a||a.role==='super_admin')return;let r=await sb.from('hadassa_admin_users').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;await log('update_admin','hadassa_admin_users',id,patch);await loadAdmins()}
 async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Adresse autorisée. La personne peut maintenant créer son mot de passe depuis le formulaire de connexion.');await loadAdmins();await overview()}
 function err(e){console.error(e);toast(e.message||'Erreur inattendue.')}
-const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),adminPasswordWrap=$('#admin-password-wrap'),rootReset=$('#root-reset');
+const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),adminPasswordWrap=$('#admin-password-wrap'),rootSetup=$('#root-setup');
 function updateLoginMode(){
  const isRoot=emailInput.value.trim().toLowerCase()===ROOT;
- rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;rootReset.hidden=!isRoot;adminPasswordWrap.hidden=isRoot;
+ rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;adminPasswordWrap.hidden=isRoot;
 }
-emailInput.addEventListener('input',updateLoginMode);
-updateLoginMode();
+emailInput.addEventListener('input',updateLoginMode);updateLoginMode();
 $('#email-form').onsubmit=async e=>{
- e.preventDefault();
- const email=emailInput.value.trim().toLowerCase();
- if(email!==ROOT){$('#login-msg').textContent='Cette adresse doit d’abord être ajoutée par le Super Admin. Utilisez « Créer mon accès administrateur ». ';return;}
+ e.preventDefault();const email=emailInput.value.trim().toLowerCase();
+ if(email!==ROOT){$('#login-msg').textContent='Cette adresse doit d’abord être ajoutée par le Super Admin.';return;}
  rootLogin.disabled=true;$('#login-msg').textContent='Connexion Super Admin…';
  try{const {error}=await sb.auth.signInWithPassword({email,password:$('#root-password').value});if(error)throw error;}
  catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre mot de passe.');}
@@ -70,44 +68,37 @@ $('#create-admin-account').onclick=async()=>{
  if(!email||email===ROOT){$('#login-msg').textContent='Saisissez l’adresse e-mail qui a été invitée par le Super Admin.';return;}
  if(password.length<8){$('#login-msg').textContent='Le mot de passe doit contenir au moins 8 caractères.';return;}
  if(password!==confirmPassword){$('#login-msg').textContent='Les deux mots de passe ne correspondent pas.';return;}
- button.disabled=true;$('#login-msg').textContent='Vérification de l’invitation et création du compte…';
+ button.disabled=true;$('#login-msg').textContent='Création sécurisée du compte administrateur…';
  try{
-  const {data:invite,error:inviteError}=await sb.functions.invoke('hadassa-admin-code',{body:{action:'check_invite',email}});
-  if(inviteError)throw inviteError;if(!invite?.allowed)throw Error('Cette adresse n’a pas été invitée ou son accès est désactivé.');
-  const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+'/admin.html'}});
-  if(error)throw error;
-  if(data.session){$('#login-msg').textContent='Compte créé. Ouverture du tableau de bord…';processSession(data.session);}
-  else{$('#login-msg').textContent='Compte créé. Consultez votre boîte e-mail et confirmez votre adresse pour activer votre accès.';}
+  const {data,error}=await sb.functions.invoke('hadassa-admin-code',{body:{action:'create_invited_admin',email,password}});
+  if(error)throw error;if(!data?.created)throw Error(data?.error||'La création du compte n’a pas été confirmée.');
+  const {error:loginError}=await sb.auth.signInWithPassword({email,password});if(loginError)throw loginError;
+  $('#login-msg').textContent='Compte créé. Ouverture du tableau de bord…';
  }catch(error){$('#login-msg').textContent='Création impossible : '+(error.message||'vérifiez votre invitation et réessayez.');}
  finally{button.disabled=false;}
 };
-rootReset.onclick=async()=>{
- const email=emailInput.value.trim().toLowerCase();
- if(email!==ROOT)return;rootReset.disabled=true;$('#login-msg').textContent='Envoi du lien de première activation…';
- try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/admin.html'});if(error)throw error;$('#login-msg').textContent='Un lien de vérification a été envoyé à '+email+'. Ouvrez-le une seule fois pour créer votre mot de passe.';}
- catch(error){$('#login-msg').textContent='Impossible d’envoyer le lien : '+(error.message||'erreur inconnue');}
- finally{rootReset.disabled=false;}
-};
-let recoveryMode=false;
-function showRecovery(){recoveryMode=true;$('#login').hidden=true;$('#app').hidden=true;$('#recovery').hidden=false;}
-$('#recovery-form').onsubmit=async e=>{
- e.preventDefault();const password=$('#recovery-password').value,confirmPassword=$('#recovery-confirm').value;
- if(password.length<8){$('#recovery-msg').textContent='Le mot de passe doit contenir au moins 8 caractères.';return;}
- if(password!==confirmPassword){$('#recovery-msg').textContent='Les deux mots de passe ne correspondent pas.';return;}
- const button=e.submitter;button.disabled=true;
- try{const {error}=await sb.auth.updateUser({password});if(error)throw error;recoveryMode=false;$('#recovery').hidden=true;$('#login').hidden=false;$('#login-msg').textContent='Mot de passe enregistré. Connectez-vous avec votre e-mail et votre nouveau mot de passe.';$('#root-password').value=password;}
- catch(error){$('#recovery-msg').textContent='Impossible d’enregistrer le mot de passe : '+(error.message||'erreur inconnue');}
- finally{button.disabled=false;}
+rootSetup.onclick=async()=>{
+ const token=$('#root-setup-token').value,password=$('#root-new-password').value,confirmPassword=$('#root-new-password-confirm').value;
+ if(!token){$('#login-msg').textContent='Saisissez la clé d’activation initiale.';return;}
+ if(password.length<8){$('#login-msg').textContent='Le mot de passe doit contenir au moins 8 caractères.';return;}
+ if(password!==confirmPassword){$('#login-msg').textContent='Les deux mots de passe ne correspondent pas.';return;}
+ rootSetup.disabled=true;$('#login-msg').textContent='Activation sécurisée du compte Super Admin…';
+ try{
+  const {data,error}=await sb.functions.invoke('hadassa-admin-code',{body:{action:'set_root_password',email:ROOT,activation_token:token,password}});
+  if(error)throw error;if(!data?.updated)throw Error(data?.error||'L’activation n’a pas été confirmée.');
+  const {error:loginError}=await sb.auth.signInWithPassword({email:ROOT,password});if(loginError)throw loginError;
+  $('#login-msg').textContent='Mot de passe Super Admin enregistré. Connexion…';
+  $('#root-setup-token').value='';$('#root-new-password').value='';$('#root-new-password-confirm').value='';
+ }catch(error){$('#login-msg').textContent='Activation impossible : '+(error.message||'vérifiez la clé et réessayez.');}
+ finally{rootSetup.disabled=false;}
 };
 $('#set-password').onclick=async()=>{
  const password=window.prompt('Nouveau mot de passe Super Admin (8 caractères minimum) :');
- if(password===null)return;
- if(password.length<8){toast('Le mot de passe doit contenir au moins 8 caractères.');return;}
+ if(password===null)return;if(password.length<8){toast('Le mot de passe doit contenir au moins 8 caractères.');return;}
  const confirmPassword=window.prompt('Confirmez le nouveau mot de passe :');
  if(password!==confirmPassword){toast('Les deux mots de passe ne correspondent pas.');return;}
  const {error}=await sb.auth.updateUser({password});
- if(error)toast('Impossible de modifier le mot de passe : '+error.message);
- else toast('Mot de passe Super Admin enregistré. Vous pourrez ensuite vous connecter avec votre e-mail et ce mot de passe.');
+ if(error)toast('Impossible de modifier le mot de passe : '+error.message);else toast('Mot de passe Super Admin modifié.');
 };
 $('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 document.querySelectorAll('[data-view],[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view||b.dataset.go)));
@@ -142,9 +133,7 @@ function processSession(session){
   }
  },0);
 }
-sb.auth.onAuthStateChange((event,session)=>{
- if(event==='PASSWORD_RECOVERY'){showRecovery();return;}
- if(recoveryMode)return;
+sb.auth.onAuthStateChange((_event,session)=>{
  processSession(session);
 });
 // Supabase JS gère automatiquement le retour PKCE dans l’URL.
@@ -152,7 +141,7 @@ sb.auth.onAuthStateChange((event,session)=>{
 async function restoreAuthSession(){
  const {data,error}=await sb.auth.getSession();
  if(error)throw new Error('Impossible de restaurer la session : '+error.message);
- if(!recoveryMode)processSession(data.session);
+ processSession(data.session);
 }
 restoreAuthSession().catch(error=>{
  console.error('HADASSA session restore failed:',error);
