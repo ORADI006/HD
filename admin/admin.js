@@ -12,17 +12,18 @@ async function start(user){
  S.user=user;let email=(user.email||'').toLowerCase();
  const invite=await sb.from('hadassa_admin_users').select('id,user_id,role,is_active').eq('email',email).maybeSingle();
  if(invite.error)throw invite.error;
- if(!invite.data||!invite.data.is_active)throw Error('Aucun accès actif n’est associé à cette adresse Google.');
- if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Ce compte administrateur est déjà lié à un autre identifiant Google.');
+ if(!invite.data||!invite.data.is_active)throw Error('Aucun accès administrateur actif n’est associé à cette adresse e-mail.');
+ if(invite.data.user_id&&invite.data.user_id!==user.id)throw Error('Ce compte administrateur est déjà lié à un autre compte de connexion.');
  if(!invite.data.user_id){
-  if(email!==ROOT)throw Error('Cette invitation n’est pas encore activée. Contactez le Super Admin.');
-  const claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null);
+  const claim=await sb.from('hadassa_admin_users').update({user_id:user.id}).eq('id',invite.data.id).is('user_id',null).select('id').maybeSingle();
   if(claim.error)throw claim.error;
+  if(!claim.data)throw Error('Cette invitation n’a pas pu être activée. Vérifiez que cette adresse a bien été ajoutée par le Super Admin.');
  }
  let q=await sb.from('hadassa_admin_users').select('*').eq('user_id',user.id).eq('is_active',true).maybeSingle();if(q.error)throw q.error;if(!q.data)throw Error('Accès administration non autorisé.');
  S.admin=q.data;loadBuilder=initSiteEditor({toast,log,user});$('#login').hidden=true;$('#app').hidden=false;$('#user-email').textContent=user.email;$('#user-role').textContent=q.data.role.toUpperCase();
  if(q.data.role!=='super_admin'){$('#admins-nav').hidden=true;document.querySelectorAll('.super-only').forEach(x=>x.hidden=true)}
  if(!can('media.manage'))document.querySelector('[data-view=media]').hidden=true;
+ $('#set-password').hidden=email!==ROOT;
  if(!can('content.manage')){document.querySelector('[data-view=content]').hidden=true;document.querySelector('[data-view=builder]').hidden=true;}
  await overview();
 }
@@ -46,24 +47,75 @@ async function saveContent(e){e.preventDefault();let content;try{content=JSON.pa
 async function delContent(k){if(!confirm('Supprimer '+k+' ?'))return;let r=await sb.from('hadassa_site_content').delete().eq('content_key',k);if(r.error)throw r.error;await log('delete_content','hadassa_site_content',k);await loadContent();await overview()}
 async function loadAdmins(){if(S.admin.role!=='super_admin')return;let r=await sb.from('hadassa_admin_users').select('*').order('created_at');if(r.error)throw r.error;S.admins=r.data||[];$('#admin-list').innerHTML=S.admins.map(a=>'<article><h4>'+esc(a.email)+'</h4><p>'+(a.user_id?'Compte activé':'Invitation en attente')+' · '+(a.is_active?'Actif':'Désactivé')+'</p><select data-role="'+a.id+'" '+(a.role==='super_admin'?'disabled':'')+'><option value="admin" '+(a.role==='admin'?'selected':'')+'>Administrateur</option><option value="editor" '+(a.role==='editor'?'selected':'')+'>Éditeur</option></select><label><input type="checkbox" data-active="'+a.id+'" '+(a.is_active?'checked':'')+' '+(a.role==='super_admin'?'disabled':'')+'> Actif</label><label><input type="checkbox" data-pcontent="'+a.id+'" '+(a.permissions?.['content.manage']?'checked':'')+'> Contenus</label><label><input type="checkbox" data-pmedia="'+a.id+'" '+(a.permissions?.['media.manage']?'checked':'')+'> Médias</label></article>').join('');$('#s-admin').textContent=S.admins.length}
 async function patchAdmin(id,patch){let a=S.admins.find(x=>x.id===id);if(!a||a.role==='super_admin')return;let r=await sb.from('hadassa_admin_users').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;await log('update_admin','hadassa_admin_users',id,patch);await loadAdmins()}
-async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Accès créé. L’invité peut se connecter avec Google.');await loadAdmins();await overview()}
+async function addAdmin(e){e.preventDefault();let email=$('#aemail').value.trim().toLowerCase();if(email===ROOT)throw Error('Adresse réservée au Super Admin.');let p={'content.manage':$('#pcontent').checked,'media.manage':$('#pmedia').checked};let r=await sb.from('hadassa_admin_users').upsert({email,role:$('#arole').value,permissions:p,is_active:true},{onConflict:'email'});if(r.error)throw r.error;await log('invite_admin','hadassa_admin_users',email,{permissions:p});$('#admin-dialog').close();$('#admin-form').reset();toast('Adresse autorisée. La personne peut maintenant créer son mot de passe depuis le formulaire de connexion.');await loadAdmins();await overview()}
 function err(e){console.error(e);toast(e.message||'Erreur inattendue.')}
-$('#google').onclick=async()=>{
- const btn=$('#google');
- btn.disabled=true;
- $('#login-msg').textContent='Redirection vers Google…';
- try{
-  const redirectTo=window.location.origin+'/admin.html';
-  const {error}=await sb.auth.signInWithOAuth({
-   provider:'google',
-   options:{redirectTo,queryParams:{prompt:'select_account'}}
-  });
-  if(error)throw error;
- }catch(error){
-  console.error('HADASSA Google sign-in failed:',error);
-  $('#login-msg').textContent='Connexion Google impossible : '+(error.message||'erreur inconnue');
-  btn.disabled=false;
+const emailInput=$('#auth-email'),rootWrap=$('#root-password-wrap'),rootLogin=$('#password-login'),adminPasswordWrap=$('#admin-password-wrap'),rootSetup=$('#root-setup');
+function updateLoginMode(){
+ const isRoot=emailInput.value.trim().toLowerCase()===ROOT;
+ rootWrap.hidden=!isRoot;rootLogin.hidden=!isRoot;adminPasswordWrap.hidden=isRoot;
+}
+emailInput.addEventListener('input',updateLoginMode);updateLoginMode();
+$('#email-form').onsubmit=async e=>{
+ e.preventDefault();const email=emailInput.value.trim().toLowerCase();
+ if(email!==ROOT){
+  const password=$('#admin-password').value,button=$('#admin-login');
+  if(!password){$('#login-msg').textContent='Saisissez votre mot de passe administrateur.';return;}
+  button.disabled=true;$('#login-msg').textContent='Connexion administrateur…';
+  try{const {error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;}
+  catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre e-mail et votre mot de passe.');}
+  finally{button.disabled=false;}
+  return;
  }
+ rootLogin.disabled=true;$('#login-msg').textContent='Connexion Super Admin…';
+ try{const {error}=await sb.auth.signInWithPassword({email,password:$('#root-password').value});if(error)throw error;}
+ catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre mot de passe.');}
+ finally{rootLogin.disabled=false;}
+};
+$('#admin-login').onclick=async()=>{
+ const email=emailInput.value.trim().toLowerCase(),password=$('#admin-password').value,button=$('#admin-login');
+ if(!email||email===ROOT){$('#login-msg').textContent='Saisissez votre adresse e-mail administrateur.';return;}
+ if(!password){$('#login-msg').textContent='Saisissez votre mot de passe.';return;}
+ button.disabled=true;$('#login-msg').textContent='Connexion administrateur…';
+ try{const {error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;}
+ catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre e-mail et votre mot de passe.');}
+ finally{button.disabled=false;}
+};
+$('#create-admin-account').onclick=async()=>{
+ const email=emailInput.value.trim().toLowerCase(),password=$('#admin-password').value,confirmPassword=$('#admin-password-confirm').value,button=$('#create-admin-account');
+ if(!email||email===ROOT){$('#login-msg').textContent='Saisissez l’adresse e-mail qui a été invitée par le Super Admin.';return;}
+ if(password.length<8){$('#login-msg').textContent='Le mot de passe doit contenir au moins 8 caractères.';return;}
+ if(password!==confirmPassword){$('#login-msg').textContent='Les deux mots de passe ne correspondent pas.';return;}
+ button.disabled=true;$('#login-msg').textContent='Création sécurisée du compte administrateur…';
+ try{
+  const {data,error}=await sb.functions.invoke('hadassa-admin-code',{body:{action:'create_invited_admin',email,password}});
+  if(error)throw error;if(!data?.created)throw Error(data?.error||'La création du compte n’a pas été confirmée.');
+  const {error:loginError}=await sb.auth.signInWithPassword({email,password});if(loginError)throw loginError;
+  $('#login-msg').textContent='Compte créé. Ouverture du tableau de bord…';
+ }catch(error){$('#login-msg').textContent='Création impossible : '+(error.message||'vérifiez votre invitation et réessayez.');}
+ finally{button.disabled=false;}
+};
+rootSetup.onclick=async()=>{
+ const token=$('#root-setup-token').value,password=$('#root-new-password').value,confirmPassword=$('#root-new-password-confirm').value;
+ if(!token){$('#login-msg').textContent='Saisissez la clé d’activation initiale.';return;}
+ if(password.length<8){$('#login-msg').textContent='Le mot de passe doit contenir au moins 8 caractères.';return;}
+ if(password!==confirmPassword){$('#login-msg').textContent='Les deux mots de passe ne correspondent pas.';return;}
+ rootSetup.disabled=true;$('#login-msg').textContent='Activation sécurisée du compte Super Admin…';
+ try{
+  const {data,error}=await sb.functions.invoke('hadassa-admin-code',{body:{action:'set_root_password',email:ROOT,activation_token:token,password}});
+  if(error)throw error;if(!data?.updated)throw Error(data?.error||'L’activation n’a pas été confirmée.');
+  const {error:loginError}=await sb.auth.signInWithPassword({email:ROOT,password});if(loginError)throw loginError;
+  $('#login-msg').textContent='Mot de passe Super Admin enregistré. Connexion…';
+  $('#root-setup-token').value='';$('#root-new-password').value='';$('#root-new-password-confirm').value='';
+ }catch(error){$('#login-msg').textContent='Activation impossible : '+(error.message||'vérifiez la clé et réessayez.');}
+ finally{rootSetup.disabled=false;}
+};
+$('#set-password').onclick=async()=>{
+ const password=window.prompt('Nouveau mot de passe Super Admin (8 caractères minimum) :');
+ if(password===null)return;if(password.length<8){toast('Le mot de passe doit contenir au moins 8 caractères.');return;}
+ const confirmPassword=window.prompt('Confirmez le nouveau mot de passe :');
+ if(password!==confirmPassword){toast('Les deux mots de passe ne correspondent pas.');return;}
+ const {error}=await sb.auth.updateUser({password});
+ if(error)toast('Impossible de modifier le mot de passe : '+error.message);else toast('Mot de passe Super Admin modifié.');
 };
 $('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 document.querySelectorAll('[data-view],[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view||b.dataset.go)));
@@ -99,19 +151,18 @@ function processSession(session){
  },0);
 }
 sb.auth.onAuthStateChange((_event,session)=>{
- // React to every auth event; the handler itself only schedules async work.
  processSession(session);
 });
 // Supabase JS gère automatiquement le retour PKCE dans l’URL.
 // getSession() attend la fin de cette initialisation et récupère la session restaurée.
 async function restoreAuthSession(){
  const {data,error}=await sb.auth.getSession();
- if(error)throw new Error('Google a confirmé la connexion, mais Supabase n’a pas pu restaurer la session : '+error.message);
+ if(error)throw new Error('Impossible de restaurer la session : '+error.message);
  processSession(data.session);
 }
 restoreAuthSession().catch(error=>{
- console.error('HADASSA OAuth callback failed:',error);
+ console.error('HADASSA session restore failed:',error);
  $('#login').hidden=false;$('#app').hidden=true;
- $('#login-msg').textContent=error.message||'Impossible de restaurer la session Google.';
- $('#google').disabled=false;
+ $('#login-msg').textContent=error.message||'Impossible de restaurer la session.';
+ 
 });
