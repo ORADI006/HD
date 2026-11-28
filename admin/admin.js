@@ -57,7 +57,15 @@ function updateLoginMode(){
 emailInput.addEventListener('input',updateLoginMode);updateLoginMode();
 $('#email-form').onsubmit=async e=>{
  e.preventDefault();const email=emailInput.value.trim().toLowerCase();
- if(email!==ROOT){$('#login-msg').textContent='Cette adresse doit d’abord être ajoutée par le Super Admin.';return;}
+ if(email!==ROOT){
+  const password=$('#admin-password').value,button=$('#admin-login');
+  if(!password){$('#login-msg').textContent='Saisissez votre mot de passe administrateur.';return;}
+  button.disabled=true;$('#login-msg').textContent='Connexion administrateur…';
+  try{const {error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;}
+  catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre e-mail et votre mot de passe.');}
+  finally{button.disabled=false;}
+  return;
+ }
  rootLogin.disabled=true;$('#login-msg').textContent='Connexion Super Admin…';
  try{const {error}=await sb.auth.signInWithPassword({email,password:$('#root-password').value});if(error)throw error;}
  catch(error){$('#login-msg').textContent='Connexion impossible : '+(error.message||'vérifiez votre mot de passe.');}
