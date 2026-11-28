@@ -74,7 +74,7 @@ $('#email-form').onsubmit=async e=>{
    if(error)throw error;
   }else{
    const code=$('#admin-access-code').value.trim();
-   if(!/^\\d{6}$/.test(code))throw Error('Saisissez le code à 6 chiffres remis par le Super Admin.');
+   if(!/^\d{6}$/.test(code))throw Error('Saisissez le code à 6 chiffres remis par le Super Admin.');
    const {data,error}=await sb.functions.invoke('hadassa-admin-code',{body:{action:'redeem',email,code}});
    if(error)throw error;
    if(!data?.token_hash)throw Error('Code invalide, expiré ou déjà utilisé.');
